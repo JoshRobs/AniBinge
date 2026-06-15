@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc -p tsconfig.app.json --noEmit && vite build",
     "preview": "npm run build && wrangler dev",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy:worker": "cd worker && wrangler deploy"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",

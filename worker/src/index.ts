@@ -201,21 +201,22 @@ export default {
     const season = match[2];
     const cacheKey = `season:${year}:${season}`;
 
-    const cached = await env.ANIBINGE_CACHE.get(cacheKey);
-    if (cached) {
-      return new Response(cached, {
-        headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
-      });
-    }
-
     try {
+      const cached = await env.ANIBINGE_CACHE.get(cacheKey);
+      if (cached) {
+        return new Response(cached, {
+          headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "HIT" },
+        });
+      }
+
       await warmSeason(season, year, env);
       const body = await env.ANIBINGE_CACHE.get(cacheKey);
-      return new Response(body, {
+      return new Response(body ?? "[]", {
         headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
       });
-    } catch (e: any) {
-      return json({ error: e.message }, 500);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return json({ error: msg }, 500);
     }
   },
 
