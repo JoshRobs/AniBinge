@@ -3,8 +3,15 @@
     class="relative cursor-pointer"
     @mouseenter="hovered = true"
     @mouseleave="hovered = false"
+    @click="
+      plannerStore.selectedAnimeId =
+        plannerStore.selectedAnimeId === anime.id ? null : anime.id
+    "
   >
-    <div class="relative overflow-hidden rounded-lg" style="aspect-ratio: 3/4">
+    <div
+      class="relative overflow-hidden rounded-lg image-container"
+      :style="{ aspectRatio: '3/4', boxShadow: hovered ? `0 0 28px 6px ${popupBorderColor}45` : 'none' }"
+    >
       <img
         v-if="anime.image"
         :src="anime.image"
@@ -26,6 +33,20 @@
       >
         ★ {{ anime.score.toFixed(1) }}
       </div>
+
+      <button
+        class="binge-btn"
+        :class="bingeStore.has(anime.id) ? 'binge-btn--added' : 'binge-btn--idle'"
+        @click.stop="bingeStore.toggle(anime)"
+        :aria-label="bingeStore.has(anime.id) ? 'Remove from binge list' : 'Add to binge list'"
+      >
+        <svg v-if="bingeStore.has(anime.id)" xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </button>
     </div>
     <div class="mt-2.5 px-0.5">
       <h3
@@ -42,22 +63,31 @@
     </div>
 
     <Transition name="popup">
-      <div v-show="hovered" class="popup">
-        <p class="popup-ends-label">Ends</p>
-        <p class="popup-ends-date">{{ anime.endDateKnown ? formatDate(anime.estimatedEnd) : "Unknown" }}</p>
+      <div
+        v-show="hovered"
+        class="popup"
+        :style="{
+          borderColor: popupBorderColor,
+          boxShadow: `0 8px 32px rgba(0,0,0,0.6), inset 0 0 18px -6px ${popupBorderColor}60`,
+        }"
+      >
+        <p class="popup-ends-label">{{ isFinished ? "Ended" : "Ends" }}</p>
+        <p class="popup-ends-date" :style="{ color: endDateColor }">
+          {{ anime.endDateKnown ? formatDate(anime.estimatedEnd) : "Unknown" }}
+        </p>
         <div class="popup-divider"></div>
         <div class="popup-row">
-          <span class="popup-label">Score</span>
-          <span class="popup-value" :class="scoreColor(anime.score)">
-            {{ anime.score ? `★ ${anime.score.toFixed(1)}` : "N/A" }}
-          </span>
+          <span class="popup-label">Type</span>
+          <span class="popup-value">{{ anime.type ?? "Unknown" }}</span>
         </div>
         <div class="popup-row">
           <span class="popup-label">Episodes</span>
-          <span class="popup-value">{{ anime.episodesKnown ? anime.episodes : "Unknown" }}</span>
+          <span class="popup-value">{{
+            anime.episodesKnown ? anime.episodes : "Unknown"
+          }}</span>
         </div>
         <div class="popup-row">
-          <span class="popup-label">Starts</span>
+          <span class="popup-label">{{ new Date(anime.start_date).getTime() <= Date.now() ? "Started" : "Starts" }}</span>
           <span class="popup-value">{{
             formatDate(new Date(anime.start_date))
           }}</span>
@@ -68,12 +98,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, computed } from "vue";
+import { usePlannerStore } from "@/stores/plannerStore";
+import { useBingeStore } from "@/stores/bingeStore";
 import type { PlannedAnime } from "@/stores/plannerStore";
 
-defineProps<{ anime: PlannedAnime }>();
+const plannerStore = usePlannerStore();
+const bingeStore = useBingeStore();
+const props = defineProps<{ anime: PlannedAnime }>();
 
 const hovered = ref(false);
+
+const isFinished = computed(() => {
+  const now = Date.now();
+  const start = props.anime.start_date ? new Date(props.anime.start_date).getTime() : Infinity;
+  return start <= now && props.anime.endDateKnown && props.anime.estimatedEnd.getTime() < now;
+});
+
+const popupBorderColor = computed(() => {
+  const now = Date.now();
+  const start = props.anime.start_date ? new Date(props.anime.start_date).getTime() : Infinity;
+  if (start > now) return "#6b7280";
+  if (isFinished.value) return "#22c55e";
+  return "#f59e0b";
+});
+
+const endDateColor = computed(() => {
+  const now = Date.now();
+  const start = props.anime.start_date ? new Date(props.anime.start_date).getTime() : Infinity;
+  if (start > now) return "#e5e7eb";
+  if (isFinished.value) return "#86efac";
+  return "#fcd34d";
+});
 
 function scoreColor(score: number): string {
   if (score >= 8) return "text-green-400";
@@ -97,6 +153,40 @@ function formatDate(date: Date): string {
 }
 .no-image {
   background-color: var(--bg-card);
+}
+.image-container {
+  transition: box-shadow 0.3s ease;
+}
+
+.binge-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+}
+.binge-btn:hover {
+  transform: scale(1.15);
+}
+.binge-btn--idle {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: rgba(255, 255, 255, 0.7);
+}
+.binge-btn--idle:hover {
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+}
+.binge-btn--added {
+  background: var(--accent);
+  color: white;
 }
 
 .popup {

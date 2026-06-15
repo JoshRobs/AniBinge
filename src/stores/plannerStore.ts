@@ -7,10 +7,13 @@ export type PlannedAnime = Anime & { estimatedEnd: Date; episodesKnown: boolean;
 export const usePlannerStore = defineStore("planner", {
   state: () => ({
     mode: "explore" as "explore" | "binge",
+    selectedAnimeId: null as number | null,
     skipped: [] as number[],
     minScore: 0,
     maxEpisodes: Infinity,
     sortBy: "endDate" as "endDate" | "score" | "episodes",
+    hideUnscored: true,
+    hideSingleEpisode: true,
   }),
 
   getters: {
@@ -19,7 +22,9 @@ export const usePlannerStore = defineStore("planner", {
 
       return animeStore.anime
         .filter((a) => !state.skipped.includes(a.id))
-        .filter((a) => a.score >= state.minScore)
+        .filter((a) => a.score === 0 || a.score >= state.minScore)
+        .filter((a) => !state.hideUnscored || a.score > 0)
+        .filter((a) => !state.hideSingleEpisode || a.episodes !== 1)
         .filter((a) => a.episodes <= state.maxEpisodes)
         .map((a) => {
           const episodesKnown = a.episodes > 0;
@@ -33,6 +38,8 @@ export const usePlannerStore = defineStore("planner", {
           return { ...a, episodesKnown, endDateKnown, estimatedEnd };
         })
         .sort((a, b) => {
+          if (!a.score && b.score) return 1;
+          if (a.score && !b.score) return -1;
           if (state.sortBy === "score") return b.score - a.score;
           if (state.sortBy === "episodes") return a.episodes - b.episodes;
           return +a.estimatedEnd - +b.estimatedEnd;

@@ -16,11 +16,6 @@
 
 .binge-mode {
   --accent: #f97316;
-  --bg-deep: #0f0800;
-  --bg-header: #1c0e00;
-  --bg-card: #2b1800;
-  --border: #3d2100;
-  --border-input: #5c3600;
 }
 
 *, *::before, *::after {

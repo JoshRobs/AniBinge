@@ -1,20 +1,44 @@
 <template>
-  <div class="border-b transition-[background-color,border-color] duration-400" style="background-color: var(--bg-header); border-color: var(--border)">
-    <div class="max-w-350 mx-auto px-6 py-4 flex flex-wrap gap-6 items-end justify-between">
+  <div
+    class="border-b transition-[background-color,border-color] duration-400"
+    style="background-color: var(--bg-header); border-color: var(--border)"
+  >
+    <div
+      class="max-w-350 mx-auto px-6 py-4 flex flex-wrap gap-6 items-end justify-between"
+    >
       <div class="flex flex-col gap-1.5">
-        <label class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold">Season</label>
-        <select v-model="seasonStore.season" @change="onSeasonChange" class="filter-select">
-          <option v-for="s in seasons" :key="s" :value="s">{{ capitalize(s) }}</option>
+        <label
+          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
+          >Season</label
+        >
+        <select
+          v-model="seasonStore.season"
+          @change="onSeasonChange"
+          class="filter-select"
+        >
+          <option v-for="s in seasons" :key="s" :value="s">
+            {{ capitalize(s) }}
+          </option>
         </select>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold">Year</label>
-        <select v-model.number="seasonStore.year" @change="onSeasonChange" class="filter-select">
+        <label
+          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
+          >Year</label
+        >
+        <select
+          v-model.number="seasonStore.year"
+          @change="onSeasonChange"
+          class="filter-select"
+        >
           <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
         </select>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold">Sort By</label>
+        <label
+          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
+          >Sort By</label
+        >
         <select v-model="plannerStore.sortBy" class="filter-select">
           <option value="endDate">End Date</option>
           <option value="score">Score</option>
@@ -22,32 +46,126 @@
         </select>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold">Min Score</label>
+        <label
+          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
+          >Min Score</label
+        >
         <select v-model.number="plannerStore.minScore" class="filter-select">
           <option :value="0">Any</option>
-          <option v-for="n in [5, 6, 7, 8, 9]" :key="n" :value="n">{{ n }}+</option>
+          <option v-for="n in [5, 6, 7, 8, 9]" :key="n" :value="n">
+            {{ n }}+
+          </option>
         </select>
       </div>
-      <div class="flex items-end ml-auto">
+      <div class="flex flex-col gap-1.5">
+        <label
+          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
+          >Exclude</label
+        >
+        <div class="flex gap-2">
+          <button
+            @click="plannerStore.hideUnscored = !plannerStore.hideUnscored"
+            :class="plannerStore.hideUnscored ? 'pill-active' : 'pill-inactive'"
+            class="pill"
+          >
+            No Score
+          </button>
+          <button
+            @click="
+              plannerStore.hideSingleEpisode = !plannerStore.hideSingleEpisode
+            "
+            :class="
+              plannerStore.hideSingleEpisode ? 'pill-active' : 'pill-inactive'
+            "
+            class="pill"
+          >
+            OVA/Movie
+          </button>
+        </div>
+      </div>
+      <div class="flex items-end gap-3 ml-auto">
+        <div v-if="plannerStore.mode === 'binge'" ref="exportRef" class="relative">
+          <button
+            class="export-btn"
+            :disabled="exporting"
+            @click="exportOpen = !exportOpen"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            {{ exporting ? "Exporting…" : "Export" }}
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div v-if="exportOpen" class="export-dropdown">
+            <button class="export-option" @click="doExport('png')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+              </svg>
+              PNG Image
+            </button>
+            <button class="export-option" @click="doExport('pdf')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              PDF Document
+            </button>
+          </div>
+        </div>
         <div class="mode-toggle">
           <button
             @click="plannerStore.mode = 'explore'"
-            :class="plannerStore.mode === 'explore' ? 'mode-btn-active' : 'mode-btn-inactive'"
+            :class="
+              plannerStore.mode === 'explore'
+                ? 'mode-btn-active'
+                : 'mode-btn-inactive'
+            "
             class="mode-btn"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="3" width="7" height="7" />
+              <rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" />
+              <rect x="14" y="14" width="7" height="7" />
             </svg>
             Explore
           </button>
           <div class="mode-divider"></div>
           <button
             @click="plannerStore.mode = 'binge'"
-            :class="plannerStore.mode === 'binge' ? 'mode-btn-active' : 'mode-btn-inactive'"
+            :class="
+              plannerStore.mode === 'binge'
+                ? 'mode-btn-active'
+                : 'mode-btn-inactive'
+            "
             class="mode-btn"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <line x1="8" y1="6" x2="21" y2="6" />
+              <line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" />
+              <line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" />
+              <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
             Binge
           </button>
@@ -58,9 +176,11 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, onUnmounted } from "vue";
 import { useSeasonStore } from "@/stores/seasonStore";
 import { useAnimeStore } from "@/stores/animeStore";
 import { usePlannerStore } from "@/stores/plannerStore";
+import { exportToPng, exportToPdf } from "@/composables/useExport";
 
 const seasonStore = useSeasonStore();
 const animeStore = useAnimeStore();
@@ -74,6 +194,34 @@ const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 function onSeasonChange() {
   animeStore.loadSeason();
+}
+
+const exportRef = ref<HTMLElement | null>(null);
+const exportOpen = ref(false);
+const exporting = ref(false);
+
+function onDocClick(e: MouseEvent) {
+  if (exportRef.value && !exportRef.value.contains(e.target as Node)) {
+    exportOpen.value = false;
+  }
+}
+
+watch(exportOpen, (open) => {
+  if (open) document.addEventListener("click", onDocClick);
+  else document.removeEventListener("click", onDocClick);
+});
+
+onUnmounted(() => document.removeEventListener("click", onDocClick));
+
+async function doExport(format: "png" | "pdf") {
+  exportOpen.value = false;
+  exporting.value = true;
+  try {
+    if (format === "png") await exportToPng("binge-timeline");
+    else await exportToPdf("binge-timeline");
+  } finally {
+    exporting.value = false;
+  }
 }
 </script>
 
@@ -91,7 +239,9 @@ function onSeasonChange() {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
-  transition: background-color 0.4s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.4s ease,
+    border-color 0.15s ease;
 }
 .filter-select:hover,
 .filter-select:focus {
@@ -100,6 +250,89 @@ function onSeasonChange() {
 }
 option {
   background-color: var(--bg-card);
+}
+
+.pill {
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border-input);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+  white-space: nowrap;
+}
+.pill-active {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.pill-inactive {
+  background-color: var(--bg-card);
+  color: #9ca3af;
+}
+.pill-inactive:hover {
+  color: white;
+  border-color: var(--accent);
+}
+
+.export-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  background-color: var(--bg-card);
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.export-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: white;
+}
+.export-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.export-dropdown {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  background-color: var(--bg-header);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 160px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.export-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #d1d5db;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.1s, color 0.1s;
+}
+.export-option:hover {
+  background-color: var(--bg-card);
+  color: white;
 }
 
 .mode-toggle {
@@ -118,7 +351,9 @@ option {
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 .mode-btn-active {
   background-color: var(--accent);

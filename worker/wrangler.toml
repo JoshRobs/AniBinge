@@ -2,7 +2,10 @@ name = "anibinge-api"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 
+[triggers]
+crons = ["0 3 * * *"]
+
 [[kv_namespaces]]
-binding = "ANIME_CACHE"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
-preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"
+binding = "ANIBINGE_CACHE"
+id = "4d5f2b8f92c74a58a24f7e3ff63cd37c"
+preview_id = "90876162d9d6436db686326242d36913"
