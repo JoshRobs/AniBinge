@@ -32,13 +32,13 @@
       <div
         class="binge-row binge-row--now"
         :class="{ 'drag-over': dropIndex === 0 }"
-        :style="rowStyle(bingeItems[0], 0)"
+        :style="rowStyle(firstItem, 0)"
         draggable="true"
         @click="
           plannerStore.selectedAnimeId =
-            plannerStore.selectedAnimeId === bingeItems[0].id
+            plannerStore.selectedAnimeId === firstItem.id
               ? null
-              : bingeItems[0].id
+              : firstItem.id
         "
         @mouseenter="hoveredIndex = 0"
         @mouseleave="hoveredIndex = null"
@@ -63,27 +63,27 @@
           </svg>
         </div>
         <img
-          v-if="bingeItems[0].image"
-          :src="bingeItems[0].image"
-          :alt="bingeItems[0].title"
+          v-if="firstItem.image"
+          :src="firstItem.image"
+          :alt="firstItem.title"
           class="row-cover row-cover--now"
         />
         <div class="row-info">
           <h3 class="row-title row-title--now">
-            {{ bingeItems[0].title_english ?? bingeItems[0].title }}
+            {{ firstItem.title_english ?? firstItem.title }}
           </h3>
           <p
             v-if="
-              bingeItems[0].title_english &&
-              bingeItems[0].title_english !== bingeItems[0].title
+              firstItem.title_english &&
+              firstItem.title_english !== firstItem.title
             "
             class="row-subtitle"
           >
-            {{ bingeItems[0].title }}
+            {{ firstItem.title }}
           </p>
-          <div v-if="bingeItems[0].genres?.length" class="genre-tags">
+          <div v-if="firstItem.genres?.length" class="genre-tags">
             <span
-              v-for="g in bingeItems[0].genres"
+              v-for="g in firstItem.genres"
               :key="g"
               class="genre-tag"
               >{{ g }}</span
@@ -92,29 +92,29 @@
         </div>
         <div class="row-stats">
           <p class="stats-label">
-            {{ isFinished(bingeItems[0]) ? "Ended" : bingeItems[0].end_date ? "Ends" : "Ends (est.)" }}
+            {{ isFinished(firstItem) ? "Ended" : firstItem.end_date ? "Ends" : "Ends (est.)" }}
           </p>
           <p
             class="stats-date stats-date--now"
-            :class="endClass(bingeItems[0])"
+            :class="endClass(firstItem)"
           >
             {{
-              bingeItems[0].end_date
-                ? formatDate(bingeItems[0].estimatedEnd)
-                : `~ ${formatDate(bingeItems[0].estimatedEnd)}`
+              firstItem.end_date
+                ? formatDate(firstItem.estimatedEnd)
+                : `~ ${formatDate(firstItem.estimatedEnd)}`
             }}
           </p>
           <p class="stats-eps">
             {{
-              bingeItems[0].episodesKnown
-                ? `${bingeItems[0].episodes} episodes`
+              firstItem.episodesKnown
+                ? `${firstItem.episodes} episodes`
                 : "Episodes unknown"
             }}
           </p>
         </div>
         <button
           class="row-remove"
-          @click.stop="bingeStore.remove(bingeItems[0].id)"
+          @click.stop="bingeStore.remove(firstItem.id)"
           aria-label="Remove"
         >
           <svg
@@ -238,6 +238,7 @@ const bingeStore = useBingeStore();
 const plannerStore = usePlannerStore();
 
 const bingeItems = computed<PlannedAnime[]>(() => bingeStore.list.map(toPlanned));
+const firstItem = computed(() => bingeItems.value[0] as PlannedAnime);
 
 // ── Drag and drop ─────────────────────────────────────────────────────────────
 

@@ -1,5 +1,3 @@
-/// <reference types="vite/client" />
-
 export interface Anime {
   id: number;
   title: string;

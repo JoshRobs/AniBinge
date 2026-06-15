@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "preview": "vite preview"
+    "build": "vue-tsc -p tsconfig.app.json --noEmit && vite build",
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.18",
@@ -20,11 +21,13 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.40.2",
     "@types/node": "^24.10.1",
     "@vitejs/plugin-vue": "^6.0.1",
     "@vue/tsconfig": "^0.8.1",
     "typescript": "~5.9.3",
     "vite": "^7.2.4",
-    "vue-tsc": "^3.1.4"
+    "vue-tsc": "^3.1.4",
+    "wrangler": "^4.100.0"
   }
 }

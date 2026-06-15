@@ -42,8 +42,8 @@ export const useBingeStore = defineStore("binge", () => {
   }
 
   function move(fromIndex: number, toIndex: number): void {
-    const [item] = list.value.splice(fromIndex, 1);
-    list.value.splice(toIndex, 0, item);
+    const removed = list.value.splice(fromIndex, 1);
+    if (removed[0]) list.value.splice(toIndex, 0, removed[0]);
   }
 
   function sortByEndDate(): void {

@@ -8,6 +8,8 @@
     "allowJs": true,
     "checkJs": false,
     "noEmit": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "module": "ESNext",
+    "types": ["vite/client"]
   }
 }
