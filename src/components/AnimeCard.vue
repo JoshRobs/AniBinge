@@ -71,9 +71,9 @@
           boxShadow: `0 8px 32px rgba(0,0,0,0.6), inset 0 0 18px -6px ${popupBorderColor}60`,
         }"
       >
-        <p class="popup-ends-label">{{ isFinished ? "Ended" : "Ends" }}</p>
+        <p class="popup-ends-label">{{ isFinished(anime) ? "Ended" : anime.end_date ? "Ends" : "Ends (est.)" }}</p>
         <p class="popup-ends-date" :style="{ color: endDateColor }">
-          {{ anime.endDateKnown ? formatDate(anime.estimatedEnd) : "Unknown" }}
+          {{ anime.end_date ? formatDate(anime.estimatedEnd) : `~ ${formatDate(anime.estimatedEnd)}` }}
         </p>
         <div class="popup-divider"></div>
         <div class="popup-row">
@@ -87,7 +87,7 @@
           }}</span>
         </div>
         <div class="popup-row">
-          <span class="popup-label">{{ new Date(anime.start_date).getTime() <= Date.now() ? "Started" : "Starts" }}</span>
+          <span class="popup-label">{{ isStarted(anime) ? "Started" : "Starts" }}</span>
           <span class="popup-value">{{
             formatDate(new Date(anime.start_date))
           }}</span>
@@ -101,7 +101,8 @@
 import { ref, computed } from "vue";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useBingeStore } from "@/stores/bingeStore";
-import type { PlannedAnime } from "@/stores/plannerStore";
+import { isFinished, isStarted, scoreColor, formatDate } from "@/utils/anime";
+import type { PlannedAnime } from "@/utils/anime";
 
 const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
@@ -109,17 +110,11 @@ const props = defineProps<{ anime: PlannedAnime }>();
 
 const hovered = ref(false);
 
-const isFinished = computed(() => {
-  const now = Date.now();
-  const start = props.anime.start_date ? new Date(props.anime.start_date).getTime() : Infinity;
-  return start <= now && props.anime.endDateKnown && props.anime.estimatedEnd.getTime() < now;
-});
-
 const popupBorderColor = computed(() => {
   const now = Date.now();
   const start = props.anime.start_date ? new Date(props.anime.start_date).getTime() : Infinity;
   if (start > now) return "#6b7280";
-  if (isFinished.value) return "#22c55e";
+  if (isFinished(props.anime)) return "#22c55e";
   return "#f59e0b";
 });
 
@@ -127,24 +122,9 @@ const endDateColor = computed(() => {
   const now = Date.now();
   const start = props.anime.start_date ? new Date(props.anime.start_date).getTime() : Infinity;
   if (start > now) return "#e5e7eb";
-  if (isFinished.value) return "#86efac";
+  if (isFinished(props.anime)) return "#86efac";
   return "#fcd34d";
 });
-
-function scoreColor(score: number): string {
-  if (score >= 8) return "text-green-400";
-  if (score <= 5) return "text-red-400";
-  return "text-yellow-300";
-}
-
-function formatDate(date: Date): string {
-  if (!date || isNaN(date.getTime())) return "TBA";
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 </script>
 
 <style scoped>

@@ -84,6 +84,12 @@
         </div>
       </div>
       <div class="flex items-end gap-3 ml-auto">
+        <button v-if="plannerStore.mode === 'binge'" class="sort-btn" @click="bingeStore.sortByEndDate()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/>
+          </svg>
+          Sort by End Date
+        </button>
         <div v-if="plannerStore.mode === 'binge'" ref="exportRef" class="relative">
           <button
             class="export-btn"
@@ -110,6 +116,12 @@
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
               </svg>
               PDF Document
+            </button>
+            <button class="export-option" @click="doExport('clipboard')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+              </svg>
+              Copy to Clipboard
             </button>
           </div>
         </div>
@@ -180,11 +192,13 @@ import { ref, watch, onUnmounted } from "vue";
 import { useSeasonStore } from "@/stores/seasonStore";
 import { useAnimeStore } from "@/stores/animeStore";
 import { usePlannerStore } from "@/stores/plannerStore";
-import { exportToPng, exportToPdf } from "@/composables/useExport";
+import { exportToPng, exportToPdf, copyToClipboard } from "@/composables/useExport";
+import { useBingeStore } from "@/stores/bingeStore";
 
 const seasonStore = useSeasonStore();
 const animeStore = useAnimeStore();
 const plannerStore = usePlannerStore();
+const bingeStore = useBingeStore();
 
 const seasons = ["winter", "spring", "summer", "fall"] as const;
 const currentYear = new Date().getFullYear();
@@ -213,12 +227,13 @@ watch(exportOpen, (open) => {
 
 onUnmounted(() => document.removeEventListener("click", onDocClick));
 
-async function doExport(format: "png" | "pdf") {
+async function doExport(format: "png" | "pdf" | "clipboard") {
   exportOpen.value = false;
   exporting.value = true;
   try {
     if (format === "png") await exportToPng("binge-timeline");
-    else await exportToPdf("binge-timeline");
+    else if (format === "pdf") await exportToPdf("binge-timeline");
+    else await copyToClipboard("binge-timeline");
   } finally {
     exporting.value = false;
   }
@@ -279,6 +294,26 @@ option {
   border-color: var(--accent);
 }
 
+.sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  background-color: var(--bg-card);
+  color: #e5e7eb;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.sort-btn:hover {
+  border-color: var(--accent);
+  color: white;
+}
+
 .export-btn {
   display: flex;
   align-items: center;
@@ -304,7 +339,7 @@ option {
 }
 .export-dropdown {
   position: absolute;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
   right: 0;
   background-color: var(--bg-header);
   border: 1px solid var(--border-input);

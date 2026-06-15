@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref, watch } from "vue";
 import type { Anime } from "@/api/jikanApi";
+import { toPlanned } from "@/utils/anime";
 
 const STORAGE_KEY = "anibinge-binge-list";
 
@@ -45,5 +46,11 @@ export const useBingeStore = defineStore("binge", () => {
     list.value.splice(toIndex, 0, item);
   }
 
-  return { list, has, add, remove, toggle, move };
+  function sortByEndDate(): void {
+    list.value = [...list.value].sort(
+      (a, b) => toPlanned(a).estimatedEnd.getTime() - toPlanned(b).estimatedEnd.getTime()
+    );
+  }
+
+  return { list, has, add, remove, toggle, move, sortByEndDate };
 });

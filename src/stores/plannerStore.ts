@@ -1,8 +1,8 @@
 import { defineStore } from "pinia";
 import { useAnimeStore } from "./animeStore";
-import type { Anime } from "@/api/jikanApi";
+import { toPlanned } from "@/utils/anime";
 
-export type PlannedAnime = Anime & { estimatedEnd: Date; episodesKnown: boolean; endDateKnown: boolean };
+export type { PlannedAnime } from "@/utils/anime";
 
 export const usePlannerStore = defineStore("planner", {
   state: () => ({
@@ -17,7 +17,7 @@ export const usePlannerStore = defineStore("planner", {
   }),
 
   getters: {
-    plannedAnime: (state): PlannedAnime[] => {
+    plannedAnime: (state) => {
       const animeStore = useAnimeStore();
 
       return animeStore.anime
@@ -26,17 +26,7 @@ export const usePlannerStore = defineStore("planner", {
         .filter((a) => !state.hideUnscored || a.score > 0)
         .filter((a) => !state.hideSingleEpisode || a.episodes !== 1)
         .filter((a) => a.episodes <= state.maxEpisodes)
-        .map((a) => {
-          const episodesKnown = a.episodes > 0;
-          const endDateKnown = !!a.end_date || episodesKnown;
-          const estimatedEnd = a.end_date
-            ? new Date(a.end_date)
-            : new Date(
-                new Date(a.start_date).getTime() +
-                  ((episodesKnown ? a.episodes : 12) - 1) * 7 * 86400000
-              );
-          return { ...a, episodesKnown, endDateKnown, estimatedEnd };
-        })
+        .map(toPlanned)
         .sort((a, b) => {
           if (!a.score && b.score) return 1;
           if (a.score && !b.score) return -1;

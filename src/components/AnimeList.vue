@@ -55,24 +55,14 @@ import AnimeCard from "./AnimeCard.vue";
 import { useAnimeStore } from "@/stores/animeStore";
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useSearchStore } from "@/stores/searchStore";
-import type { PlannedAnime } from "@/stores/plannerStore";
+import { toPlanned, type PlannedAnime } from "@/utils/anime";
 
 const animeStore = useAnimeStore();
 const plannerStore = usePlannerStore();
 const searchStore = useSearchStore();
 
 const searchPlanned = computed<PlannedAnime[]>(() =>
-  searchStore.results.map((a) => {
-    const episodesKnown = a.episodes > 0;
-    const endDateKnown = !!a.end_date || episodesKnown;
-    const estimatedEnd = a.end_date
-      ? new Date(a.end_date)
-      : new Date(
-          new Date(a.start_date).getTime() +
-            ((episodesKnown ? a.episodes : 12) - 1) * 7 * 86400000
-        );
-    return { ...a, episodesKnown, endDateKnown, estimatedEnd };
-  })
+  searchStore.results.map(toPlanned)
 );
 
 onMounted(() => {

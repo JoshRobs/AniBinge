@@ -92,16 +92,16 @@
         </div>
         <div class="row-stats">
           <p class="stats-label">
-            {{ isFinished(bingeItems[0]) ? "Ended" : "Ends" }}
+            {{ isFinished(bingeItems[0]) ? "Ended" : bingeItems[0].end_date ? "Ends" : "Ends (est.)" }}
           </p>
           <p
             class="stats-date stats-date--now"
             :class="endClass(bingeItems[0])"
           >
             {{
-              bingeItems[0].endDateKnown
+              bingeItems[0].end_date
                 ? formatDate(bingeItems[0].estimatedEnd)
-                : "Unknown"
+                : `~ ${formatDate(bingeItems[0].estimatedEnd)}`
             }}
           </p>
           <p class="stats-eps">
@@ -186,11 +186,13 @@
           </div>
           <div class="row-stats">
             <p class="stats-label">
-              {{ isFinished(anime) ? "Ended" : "Ends" }}
+              {{ isFinished(anime) ? "Ended" : anime.end_date ? "Ends" : "Ends (est.)" }}
             </p>
             <p class="stats-date" :class="endClass(anime)">
               {{
-                anime.endDateKnown ? formatDate(anime.estimatedEnd) : "Unknown"
+                anime.end_date
+                  ? formatDate(anime.estimatedEnd)
+                  : `~ ${formatDate(anime.estimatedEnd)}`
               }}
             </p>
             <p class="stats-eps">
@@ -230,30 +232,12 @@
 import { computed, ref } from "vue";
 import { useBingeStore } from "@/stores/bingeStore";
 import { usePlannerStore } from "@/stores/plannerStore";
-import type { Anime } from "@/api/jikanApi";
+import { toPlanned, formatDate, isFinished, type PlannedAnime } from "@/utils/anime";
 
 const bingeStore = useBingeStore();
 const plannerStore = usePlannerStore();
 
-interface BingeAnime extends Anime {
-  episodesKnown: boolean;
-  endDateKnown: boolean;
-  estimatedEnd: Date;
-}
-
-function toPlanned(a: Anime): BingeAnime {
-  const episodesKnown = a.episodes > 0;
-  const endDateKnown = !!a.end_date || episodesKnown;
-  const estimatedEnd = a.end_date
-    ? new Date(a.end_date)
-    : new Date(
-        new Date(a.start_date).getTime() +
-          ((episodesKnown ? a.episodes : 12) - 1) * 7 * 86400000,
-      );
-  return { ...a, episodesKnown, endDateKnown, estimatedEnd };
-}
-
-const bingeItems = computed<BingeAnime[]>(() => bingeStore.list.map(toPlanned));
+const bingeItems = computed<PlannedAnime[]>(() => bingeStore.list.map(toPlanned));
 
 // ── Drag and drop ─────────────────────────────────────────────────────────────
 
@@ -286,26 +270,8 @@ function onDragEnd() {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function formatDate(date: Date): string {
-  if (!date || isNaN(date.getTime())) return "TBA";
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
 
-function isFinished(anime: BingeAnime): boolean {
-  const now = Date.now();
-  const start = anime.start_date
-    ? new Date(anime.start_date).getTime()
-    : Infinity;
-  return (
-    start <= now && anime.endDateKnown && anime.estimatedEnd.getTime() < now
-  );
-}
-
-function endClass(anime: BingeAnime): string {
+function endClass(anime: PlannedAnime): string {
   const now = Date.now();
   const start = anime.start_date
     ? new Date(anime.start_date).getTime()
@@ -317,7 +283,7 @@ function endClass(anime: BingeAnime): string {
 
 const hoveredIndex = ref<number | null>(null);
 
-function rowStyle(anime: BingeAnime, index: number) {
+function rowStyle(anime: PlannedAnime, index: number) {
   if (dropIndex.value === index) return {};
   const h = hoveredIndex.value === index;
   const now = Date.now();
@@ -511,6 +477,15 @@ function rowStyle(anime: BingeAnime, index: number) {
 }
 .stats-date--now {
   font-size: 28px;
+}
+.stats-estimated {
+  font-size: 10px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-left: 4px;
+  vertical-align: middle;
 }
 .stats-eps {
   font-size: 13px;

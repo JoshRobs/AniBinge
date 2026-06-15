@@ -28,6 +28,7 @@
         :src="anime.image"
         :alt="anime.title"
         class="detail-cover"
+        @click="coverModalOpen = true"
       />
       <div class="detail-titles">
         <h2 class="detail-title">{{ anime.title_english ?? anime.title }}</h2>
@@ -77,16 +78,19 @@
           }}</span>
         </div>
         <div class="stat">
-          <span class="stat-label">Starts</span>
+          <span class="stat-label">{{ isStarted(anime) ? "Started" : "Starts" }}</span>
           <span class="stat-value">{{
             formatDate(new Date(anime.start_date))
           }}</span>
         </div>
         <div class="stat">
-          <span class="stat-label">Ends</span>
+          <span class="stat-label">{{ isFinished(anime) ? "Ended" : "Ends" }}</span>
           <span class="stat-value">{{
-            anime.endDateKnown ? formatDate(anime.estimatedEnd) : "Unknown"
+            anime.end_date
+              ? formatDate(anime.estimatedEnd)
+              : `~ ${formatDate(anime.estimatedEnd)}`
           }}</span>
+          <span v-if="!anime.end_date" class="stat-estimated">estimated</span>
         </div>
       </div>
 
@@ -141,11 +145,24 @@
 
       <div class="detail-section">
         <h3 class="detail-section-title">Synopsis</h3>
-        <p v-if="anime.synopsis" ref="synopsisEl" class="detail-synopsis" :class="{ 'detail-synopsis--clamped': !synopsisExpanded }">
+        <p
+          v-if="anime.synopsis"
+          ref="synopsisEl"
+          class="detail-synopsis"
+          :class="{ 'detail-synopsis--clamped': !synopsisExpanded }"
+        >
           {{ anime.synopsis }}
         </p>
-        <button v-if="anime.synopsis && synopsisIsClamped && !synopsisExpanded" class="review-expand-btn" @click="synopsisExpanded = true">Read more</button>
-        <p v-else-if="!anime.synopsis" class="detail-placeholder">No synopsis available</p>
+        <button
+          v-if="anime.synopsis && synopsisIsClamped && !synopsisExpanded"
+          class="review-expand-btn"
+          @click="synopsisExpanded = true"
+        >
+          Read more
+        </button>
+        <p v-else-if="!anime.synopsis" class="detail-placeholder">
+          No synopsis available
+        </p>
       </div>
 
       <div class="detail-section">
@@ -162,12 +179,17 @@
           >
             <img
               v-if="!failedLogos.includes(s.name)"
-              :src="LOGO_OVERRIDES[s.name] ?? `https://www.google.com/s2/favicons?domain_url=${s.url}&sz=64`"
+              :src="
+                LOGO_OVERRIDES[s.name] ??
+                `https://www.google.com/s2/favicons?domain_url=${s.url}&sz=64`
+              "
               :alt="s.name"
               class="streaming-logo"
               @error="onLogoError(s.name)"
             />
-            <span v-else class="streaming-logo-fallback">{{ s.name.slice(0, 2) }}</span>
+            <span v-else class="streaming-logo-fallback">{{
+              s.name.slice(0, 2)
+            }}</span>
           </a>
         </div>
         <p v-else class="detail-placeholder">No streaming links available</p>
@@ -253,6 +275,22 @@
       </template>
     </template>
   </div>
+
+  <!-- Cover image modal -->
+  <Teleport to="body">
+    <div
+      v-if="coverModalOpen"
+      class="cover-modal-backdrop"
+      @click="coverModalOpen = false"
+    >
+      <img
+        :src="anime?.image"
+        :alt="anime?.title"
+        class="cover-modal-img"
+        @click.stop
+      />
+    </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -265,22 +303,12 @@ const LOGO_OVERRIDES: Record<string, string> = {
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useBingeStore } from "@/stores/bingeStore";
 import { fetchAnimeReviews } from "@/api/jikanApi";
-import type { Anime, AnimeReview } from "@/api/jikanApi";
+import type { AnimeReview } from "@/api/jikanApi";
+import { toPlanned, formatDate, scoreColor, isStarted, isFinished } from "@/utils/anime";
 
 const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
 
-function toPlanned(a: Anime) {
-  const episodesKnown = a.episodes > 0;
-  const endDateKnown = !!a.end_date || episodesKnown;
-  const estimatedEnd = a.end_date
-    ? new Date(a.end_date)
-    : new Date(
-        new Date(a.start_date).getTime() +
-          ((episodesKnown ? a.episodes : 12) - 1) * 7 * 86400000,
-      );
-  return { ...a, episodesKnown, endDateKnown, estimatedEnd };
-}
 
 const anime = computed(() => {
   const id = plannerStore.selectedAnimeId;
@@ -305,6 +333,7 @@ const synopsisExpanded = ref(false);
 const synopsisIsClamped = ref(false);
 const synopsisEl = ref<HTMLElement | null>(null);
 const failedLogos = ref<string[]>([]);
+const coverModalOpen = ref(false);
 
 const uniqueStreaming = computed(() => {
   const seen = new Set<string>();
@@ -367,9 +396,11 @@ watch(
     synopsisExpanded.value = false;
     synopsisIsClamped.value = false;
     failedLogos.value = [];
+    coverModalOpen.value = false;
     await nextTick();
     if (synopsisEl.value) {
-      synopsisIsClamped.value = synopsisEl.value.scrollHeight > synopsisEl.value.clientHeight;
+      synopsisIsClamped.value =
+        synopsisEl.value.scrollHeight > synopsisEl.value.clientHeight;
     }
   },
 );
@@ -403,22 +434,16 @@ function stopResize() {
   window.removeEventListener("mouseup", stopResize);
 }
 
-onUnmounted(stopResize);
-
-function scoreColor(score: number): string {
-  if (score >= 8) return "text-green-400";
-  if (score <= 5) return "text-red-400";
-  return "text-yellow-300";
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === "Escape") coverModalOpen.value = false;
 }
 
-function formatDate(date: Date): string {
-  if (!date || isNaN(date.getTime())) return "TBA";
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
+window.addEventListener("keydown", onKeyDown);
+onUnmounted(() => {
+  stopResize();
+  window.removeEventListener("keydown", onKeyDown);
+});
+
 </script>
 
 <style scoped>
@@ -493,6 +518,11 @@ function formatDate(date: Date): string {
   border-radius: 8px;
   object-fit: cover;
   aspect-ratio: 3/4;
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+.detail-cover:hover {
+  opacity: 0.85;
 }
 .detail-title {
   font-size: 18px;
@@ -571,6 +601,13 @@ function formatDate(date: Date): string {
   font-size: 15px;
   font-weight: 700;
   color: #e5e7eb;
+}
+.stat-estimated {
+  font-size: 10px;
+  font-weight: 600;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .detail-section {
@@ -686,6 +723,26 @@ function formatDate(date: Date): string {
   object-fit: contain;
   border-radius: 4px;
 }
+.cover-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  backdrop-filter: blur(4px);
+}
+.cover-modal-img {
+  max-height: 90vh;
+  max-width: 90vw;
+  border-radius: 12px;
+  object-fit: contain;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+
 .streaming-logo-fallback {
   font-size: 11px;
   font-weight: 700;

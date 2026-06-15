@@ -70,6 +70,21 @@ export async function exportToPng(
   });
 }
 
+export async function copyToClipboard(elementId: string): Promise<void> {
+  const canvas = await capture(elementId);
+  await new Promise<void>((resolve, reject) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) { reject(new Error("Failed to create image blob")); return; }
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    }, "image/png");
+  });
+}
+
 export async function exportToPdf(
   elementId: string,
   filename = "anibinge-list.pdf",
