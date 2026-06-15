@@ -4,9 +4,9 @@
     style="background-color: var(--bg-header); border-color: var(--border)"
   >
     <div class="max-w-350 mx-auto flex items-center gap-6">
-      <span class="text-xl font-bold tracking-tight flex-shrink-0">
+      <button class="logo-btn" @click="goHome">
         Ani<span style="color: var(--accent)" class="transition-colors duration-400">Binge</span>
-      </span>
+      </button>
       <div class="search-wrap">
         <svg
           class="search-icon"
@@ -69,6 +69,10 @@ import { usePlannerStore } from "@/stores/plannerStore";
 const searchStore = useSearchStore();
 const plannerStore = usePlannerStore();
 
+function goHome() {
+  plannerStore.mode = plannerStore.mode === "explore" ? "binge" : "explore";
+}
+
 function onInput(e: Event) {
   const value = (e.target as HTMLInputElement).value;
   if (value.trim().length > 0 && plannerStore.mode === "binge") {
@@ -79,6 +83,18 @@ function onInput(e: Event) {
 </script>
 
 <style scoped>
+.logo-btn {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
 .kofi-btn {
   display: flex;
   align-items: center;
