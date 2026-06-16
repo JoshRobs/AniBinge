@@ -4,6 +4,9 @@ export interface Env {
 
 const CACHE_TTL = 60 * 60 * 48; // 48 hours
 const JIKAN_PAGE_DELAY = 500;
+const INFLIGHT_TTL = 120; // seconds — lock auto-expires if a worker crashes mid-fetch
+const POLL_INTERVAL = 1000; // ms between KV checks when waiting on another worker
+const POLL_TIMEOUT = 30_000; // ms — give up waiting and fetch ourselves after this
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +26,7 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // ── Season helpers ────────────────────────────────────────────────────────────
 
 type Season = "winter" | "spring" | "summer" | "fall";
+const SEASON_ORDER: Season[] = ["winter", "spring", "summer", "fall"];
 
 function monthToSeason(month: number): Season {
   if (month <= 3) return "winter";
@@ -36,14 +40,17 @@ function currentSeason(): { season: Season; year: number } {
   return { season: monthToSeason(now.getUTCMonth() + 1), year: now.getUTCFullYear() };
 }
 
-function lastFinishedSeason(): { season: Season; year: number } {
-  const now = new Date();
-  const month = now.getUTCMonth() + 1;
-  const year = now.getUTCFullYear();
-  if (month <= 3) return { season: "fall", year: year - 1 };
-  if (month <= 6) return { season: "winter", year };
-  if (month <= 9) return { season: "spring", year };
-  return { season: "summer", year };
+// Returns the last `count` seasons in reverse-chronological order (newest first)
+function recentSeasons(count: number): Array<{ season: Season; year: number }> {
+  let { season, year } = currentSeason();
+  const result: Array<{ season: Season; year: number }> = [];
+  for (let i = 0; i < count; i++) {
+    result.push({ season, year });
+    const idx = SEASON_ORDER.indexOf(season);
+    if (idx === 0) { season = "fall"; year--; }
+    else season = SEASON_ORDER[idx - 1];
+  }
+  return result;
 }
 
 // ── Jikan ────────────────────────────────────────────────────────────────────
@@ -185,6 +192,35 @@ async function warmSeason(season: string, year: number, env: Env): Promise<void>
   );
 }
 
+// ── Inflight deduplication ────────────────────────────────────────────────────
+// KV has no atomic CAS, so two workers can slip through the lock check in the
+// same millisecond. This is acceptable: it reduces N concurrent Jikan fetches
+// down to ~2 rather than guaranteeing exactly 1.
+
+async function tryAcquireLock(env: Env, cacheKey: string): Promise<boolean> {
+  const held = await env.ANIBINGE_CACHE.get(`inflight:${cacheKey}`);
+  if (held) return false;
+  await env.ANIBINGE_CACHE.put(`inflight:${cacheKey}`, "1", { expirationTtl: INFLIGHT_TTL });
+  return true;
+}
+
+async function releaseLock(env: Env, cacheKey: string): Promise<void> {
+  await env.ANIBINGE_CACHE.delete(`inflight:${cacheKey}`);
+}
+
+// Poll until the fetching worker writes the data or drops the lock (on failure)
+async function waitForCachedData(env: Env, cacheKey: string): Promise<string | null> {
+  const deadline = Date.now() + POLL_TIMEOUT;
+  while (Date.now() < deadline) {
+    await delay(POLL_INTERVAL);
+    const data = await env.ANIBINGE_CACHE.get(cacheKey);
+    if (data) return data;
+    const stillInflight = await env.ANIBINGE_CACHE.get(`inflight:${cacheKey}`);
+    if (!stillInflight) return null; // other worker failed — we'll take over
+  }
+  return null; // timed out — fall through and fetch ourselves
+}
+
 // ── Worker ───────────────────────────────────────────────────────────────────
 
 export default {
@@ -202,6 +238,7 @@ export default {
     const cacheKey = `season:${year}:${season}`;
 
     try {
+      // Fast path: already cached
       const cached = await env.ANIBINGE_CACHE.get(cacheKey);
       if (cached) {
         return new Response(cached, {
@@ -209,7 +246,25 @@ export default {
         });
       }
 
-      await warmSeason(season, year, env);
+      // Try to become the one worker that fetches this season
+      const locked = await tryAcquireLock(env, cacheKey);
+      if (!locked) {
+        // Another worker is already fetching — wait for it to finish
+        const data = await waitForCachedData(env, cacheKey);
+        if (data) {
+          return new Response(data, {
+            headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "DEDUP" },
+          });
+        }
+        // Other worker failed or we timed out — fall through and fetch ourselves
+      }
+
+      try {
+        await warmSeason(season, year, env);
+      } finally {
+        await releaseLock(env, cacheKey);
+      }
+
       const body = await env.ANIBINGE_CACHE.get(cacheKey);
       return new Response(body ?? "[]", {
         headers: { ...corsHeaders, "Content-Type": "application/json", "X-Cache": "MISS" },
@@ -221,9 +276,23 @@ export default {
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    const seasons = [lastFinishedSeason(), currentSeason()];
+    // Pre-warm the last 3 years of seasons (12 total) sequentially so we don't
+    // flood Jikan with concurrent requests from the cron itself. Skip seasons
+    // that already have fresh data in KV.
     ctx.waitUntil(
-      Promise.allSettled(seasons.map(({ season, year }) => warmSeason(season, year, env)))
+      (async () => {
+        for (const { season, year } of recentSeasons(12)) {
+          const cacheKey = `season:${year}:${season}`;
+          const existing = await env.ANIBINGE_CACHE.get(cacheKey);
+          if (existing) continue;
+          try {
+            await warmSeason(season, year, env);
+          } catch (e) {
+            console.error(`Failed to warm ${season} ${year}:`, e);
+          }
+          await delay(5000); // breathing room between seasons for Jikan
+        }
+      })()
     );
   },
 };
