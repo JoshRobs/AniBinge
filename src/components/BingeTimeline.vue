@@ -29,173 +29,44 @@
     <template v-else>
       <!-- ── Active items ─────────────────────────────────────────────── -->
       <template v-if="previewItems.length">
-        <!-- Binging Now -->
         <p class="section-label">Binging Now</p>
-        <div
-          class="binge-row binge-row--now"
-          data-row-index="0"
-          :class="{ 'row-dragging': firstItem.id === draggingId }"
-          :style="rowStyle(firstItem, 0)"
-          draggable="true"
-          @click="
-            plannerStore.selectedAnimeId =
-              plannerStore.selectedAnimeId === firstItem.id
-                ? null
-                : firstItem.id
-          "
-          @mouseenter="hoveredIndex = 0"
-          @mouseleave="hoveredIndex = null"
-          @dragstart="onDragStart($event, 0)"
-          @dragover.prevent="onDragOver(0)"
-          @drop.prevent="onDrop(0)"
-          @dragend="onDragEnd"
-        >
-          <div
-            class="drag-handle"
-            @touchstart.prevent="onHandleTouchStart($event, 0)"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-8 h-8"
-              viewBox="0 0 24 24"
-              fill="currentColor"
+        <!-- Single TransitionGroup for ALL active rows so that dragging any item
+             to slot 0 keeps its DOM element inside the group (FLIP-animates it
+             to the top) rather than removing it, which would break touch events. -->
+        <TransitionGroup name="binge-list" tag="div" class="binge-all-group">
+          <template v-for="(anime, i) in previewItems" :key="anime.id">
+            <!-- "Up Next" section label injected before the second row -->
+            <p
+              v-if="i === 1"
+              :key="'__up-next-label__'"
+              class="section-label section-label--next section-label--inline"
             >
-              <circle cx="9" cy="6" r="1.5" />
-              <circle cx="15" cy="6" r="1.5" />
-              <circle cx="9" cy="12" r="1.5" />
-              <circle cx="15" cy="12" r="1.5" />
-              <circle cx="9" cy="18" r="1.5" />
-              <circle cx="15" cy="18" r="1.5" />
-            </svg>
-          </div>
-          <img
-            v-if="firstItem.image"
-            :src="firstItem.image"
-            :alt="firstItem.title"
-            class="row-cover row-cover--now"
-          />
-          <div class="row-main">
-            <div class="row-info">
-              <h3 class="row-title row-title--now">
-                {{ firstItem.title_english ?? firstItem.title }}
-              </h3>
-              <p
-                v-if="
-                  firstItem.title_english &&
-                  firstItem.title_english !== firstItem.title
-                "
-                class="row-subtitle"
-              >
-                {{ firstItem.title }}
-              </p>
-              <div v-if="firstItem.genres?.length" class="genre-tags">
-                <span
-                  v-for="g in firstItem.genres"
-                  :key="g"
-                  class="genre-tag"
-                  >{{ g }}</span
-                >
-              </div>
-            </div>
-            <div class="row-meta">
-              <div class="row-stats">
-                <p class="stats-label">
-                  {{
-                    isFinished(firstItem)
-                      ? "Ended"
-                      : firstItem.end_date
-                        ? "Ends"
-                        : "Ends (est.)"
-                  }}
-                </p>
-                <p
-                  class="stats-date stats-date--now"
-                  :class="endClass(firstItem)"
-                >
-                  {{
-                    firstItem.end_date
-                      ? formatDate(firstItem.estimatedEnd)
-                      : `~ ${formatDate(firstItem.estimatedEnd)}`
-                  }}
-                </p>
-                <p class="stats-eps">
-                  {{
-                    firstItem.episodesKnown
-                      ? `${firstItem.episodes} episodes`
-                      : "Episodes unknown"
-                  }}
-                </p>
-              </div>
-              <div class="row-actions">
-                <button
-                  class="row-action row-complete"
-                  @click.stop="bingeStore.toggleComplete(firstItem.id)"
-                  aria-label="Mark as completed"
-                  title="Mark as completed"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                </button>
-                <button
-                  class="row-action row-remove"
-                  @click.stop="bingeStore.remove(firstItem.id)"
-                  aria-label="Remove"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+              Up Next
+            </p>
 
-        <!-- Up Next -->
-        <template v-if="previewItems.length > 1">
-          <p class="section-label section-label--next">Up Next</p>
-          <TransitionGroup name="binge-list" tag="div" class="up-next-group">
             <div
-              v-for="(anime, i) in previewItems.slice(1)"
-              :key="anime.id"
-              class="binge-row"
-              :data-row-index="i + 1"
-              :class="{ 'row-dragging': anime.id === draggingId }"
-              :style="rowStyle(anime, i + 1)"
+              :data-row-index="i"
+              :class="[
+                'binge-row',
+                i === 0 ? 'binge-row--now' : '',
+                { 'row-dragging': anime.id === draggingId },
+              ]"
+              :style="rowStyle(anime, i)"
               draggable="true"
               @click="
                 plannerStore.selectedAnimeId =
                   plannerStore.selectedAnimeId === anime.id ? null : anime.id
               "
-              @mouseenter="hoveredIndex = i + 1"
+              @mouseenter="hoveredIndex = i"
               @mouseleave="hoveredIndex = null"
-              @dragstart="onDragStart($event, i + 1)"
-              @dragover.prevent="onDragOver(i + 1)"
-              @drop.prevent="onDrop(i + 1)"
+              @dragstart="onDragStart($event, i)"
+              @dragover.prevent="onDragOver(i)"
+              @drop.prevent="onDrop(i)"
               @dragend="onDragEnd"
             >
               <div
                 class="drag-handle"
-                @touchstart.prevent="onHandleTouchStart($event, i + 1)"
+                @touchstart.prevent="onHandleTouchStart($event, i)"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -211,98 +82,206 @@
                   <circle cx="15" cy="18" r="1.5" />
                 </svg>
               </div>
-              <span class="row-number">{{ i + 2 }}</span>
-              <img
-                v-if="anime.image"
-                :src="anime.image"
-                :alt="anime.title"
-                class="row-cover"
-              />
-              <div class="row-main">
-                <div class="row-info">
-                  <h3 class="row-title">
-                    {{ anime.title_english ?? anime.title }}
-                  </h3>
-                  <div v-if="anime.genres?.length" class="genre-tags">
-                    <span
-                      v-for="g in anime.genres"
-                      :key="g"
-                      class="genre-tag"
-                      >{{ g }}</span
+
+              <!-- ── Binging Now layout (slot 0) ── -->
+              <template v-if="i === 0">
+                <img
+                  v-if="anime.image"
+                  :src="anime.image"
+                  :alt="anime.title"
+                  class="row-cover row-cover--now"
+                />
+                <div class="row-main">
+                  <div class="row-info">
+                    <h3 class="row-title row-title--now">
+                      {{ anime.title_english ?? anime.title }}
+                    </h3>
+                    <p
+                      v-if="
+                        anime.title_english &&
+                        anime.title_english !== anime.title
+                      "
+                      class="row-subtitle"
                     >
+                      {{ anime.title }}
+                    </p>
+                    <div v-if="anime.genres?.length" class="genre-tags">
+                      <span
+                        v-for="g in anime.genres"
+                        :key="g"
+                        class="genre-tag"
+                        >{{ g }}</span
+                      >
+                    </div>
+                  </div>
+                  <div class="row-meta">
+                    <div class="row-stats">
+                      <p class="stats-label">
+                        {{
+                          isFinished(anime)
+                            ? "Ended"
+                            : anime.end_date
+                              ? "Ends"
+                              : "Ends (est.)"
+                        }}
+                      </p>
+                      <p
+                        class="stats-date stats-date--now"
+                        :class="endClass(anime)"
+                      >
+                        {{
+                          anime.end_date
+                            ? formatDate(anime.estimatedEnd)
+                            : `~ ${formatDate(anime.estimatedEnd)}`
+                        }}
+                      </p>
+                      <p class="stats-eps">
+                        {{
+                          anime.episodesKnown
+                            ? `${anime.episodes} episodes`
+                            : "Episodes unknown"
+                        }}
+                      </p>
+                    </div>
+                    <div class="row-actions">
+                      <button
+                        class="row-action row-complete"
+                        @click.stop="bingeStore.toggleComplete(anime.id)"
+                        aria-label="Mark as completed"
+                        title="Mark as completed"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="w-8 h-8"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </button>
+                      <button
+                        class="row-action row-remove"
+                        @click.stop="bingeStore.remove(anime.id)"
+                        aria-label="Remove"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="w-8 h-8"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div class="row-meta">
-                  <div class="row-stats">
-                    <p class="stats-label">
-                      {{
-                        isFinished(anime)
-                          ? "Ended"
-                          : anime.end_date
-                            ? "Ends"
-                            : "Ends (est.)"
-                      }}
-                    </p>
-                    <p class="stats-date" :class="endClass(anime)">
-                      {{
-                        anime.end_date
-                          ? formatDate(anime.estimatedEnd)
-                          : `~ ${formatDate(anime.estimatedEnd)}`
-                      }}
-                    </p>
-                    <p class="stats-eps">
-                      {{
-                        anime.episodesKnown
-                          ? `${anime.episodes} episodes`
-                          : "Episodes unknown"
-                      }}
-                    </p>
+              </template>
+
+              <!-- ── Up Next layout (slots 1+) ── -->
+              <template v-else>
+                <span class="row-number">{{ i + 1 }}</span>
+                <img
+                  v-if="anime.image"
+                  :src="anime.image"
+                  :alt="anime.title"
+                  class="row-cover"
+                />
+                <div class="row-main">
+                  <div class="row-info">
+                    <h3 class="row-title">
+                      {{ anime.title_english ?? anime.title }}
+                    </h3>
+                    <div v-if="anime.genres?.length" class="genre-tags">
+                      <span
+                        v-for="g in anime.genres"
+                        :key="g"
+                        class="genre-tag"
+                        >{{ g }}</span
+                      >
+                    </div>
                   </div>
-                  <div class="row-actions">
-                    <button
-                      class="row-action row-complete"
-                      @click.stop="bingeStore.toggleComplete(anime.id)"
-                      aria-label="Mark as completed"
-                      title="Mark as completed"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="w-8 h-8"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                  <div class="row-meta">
+                    <div class="row-stats">
+                      <p class="stats-label">
+                        {{
+                          isFinished(anime)
+                            ? "Ended"
+                            : anime.end_date
+                              ? "Ends"
+                              : "Ends (est.)"
+                        }}
+                      </p>
+                      <p class="stats-date" :class="endClass(anime)">
+                        {{
+                          anime.end_date
+                            ? formatDate(anime.estimatedEnd)
+                            : `~ ${formatDate(anime.estimatedEnd)}`
+                        }}
+                      </p>
+                      <p class="stats-eps">
+                        {{
+                          anime.episodesKnown
+                            ? `${anime.episodes} episodes`
+                            : "Episodes unknown"
+                        }}
+                      </p>
+                    </div>
+                    <div class="row-actions">
+                      <button
+                        class="row-action row-complete"
+                        @click.stop="bingeStore.toggleComplete(anime.id)"
+                        aria-label="Mark as completed"
+                        title="Mark as completed"
                       >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </button>
-                    <button
-                      class="row-action row-remove"
-                      @click.stop="bingeStore.remove(anime.id)"
-                      aria-label="Remove"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="w-8 h-8"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="w-8 h-8"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </button>
+                      <button
+                        class="row-action row-remove"
+                        @click.stop="bingeStore.remove(anime.id)"
+                        aria-label="Remove"
                       >
-                        <line x1="18" y1="6" x2="6" y2="18" />
-                        <line x1="6" y1="6" x2="18" y2="18" />
-                      </svg>
-                    </button>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="w-8 h-8"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2.5"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </template>
             </div>
-          </TransitionGroup>
-        </template>
+          </template>
+        </TransitionGroup>
       </template>
 
       <!-- All-done state -->
@@ -488,11 +467,10 @@ const previewItems = computed<PlannedAnime[]>(() => {
   if (from === null || to === null || from === to) return activeItems.value;
   const items = [...activeItems.value];
   const [moved] = items.splice(from, 1);
+  if (!moved) return activeItems.value;
   items.splice(to, 0, moved);
   return items;
 });
-
-const firstItem = computed(() => previewItems.value[0] as PlannedAnime);
 
 // Map activeItems index → binge store list index
 function activeListIndex(activeIdx: number): number {
@@ -558,6 +536,7 @@ function onHandleTouchStart(_e: TouchEvent, visualIdx: number) {
   swapUnlockedAt = 0;
   document.addEventListener("touchmove", onTouchMove, { passive: false });
   document.addEventListener("touchend", onTouchEnd, { passive: true });
+  document.addEventListener("touchcancel", onTouchEnd, { passive: true });
 }
 
 function onTouchMove(e: TouchEvent) {
@@ -598,12 +577,14 @@ function onTouchMove(e: TouchEvent) {
 function onTouchEnd() {
   document.removeEventListener("touchmove", onTouchMove);
   document.removeEventListener("touchend", onTouchEnd);
+  document.removeEventListener("touchcancel", onTouchEnd);
   commitDrop();
 }
 
 onUnmounted(() => {
   document.removeEventListener("touchmove", onTouchMove);
   document.removeEventListener("touchend", onTouchEnd);
+  document.removeEventListener("touchcancel", onTouchEnd);
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -712,11 +693,17 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
   line-height: 1.6;
 }
 
-/* ── Up Next TransitionGroup ── */
-.up-next-group {
+/* ── Active items TransitionGroup (Binging Now + Up Next in one group) ── */
+.binge-all-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* "Up Next" label rendered inside the TransitionGroup — sits above FLIP rows */
+.section-label--inline {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Rows ── */
@@ -969,7 +956,8 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
 
   .drag-handle {
     color: #4b5563;
-    padding-top: 2px;
+    align-self: stretch;
+    justify-content: center;
     cursor: grab;
   }
   .drag-handle svg {
