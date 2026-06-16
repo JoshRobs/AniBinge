@@ -54,7 +54,8 @@ onMounted(() => {
 watch(
   () => plannerStore.selectedAnimeId,
   (id) => {
-    document.body.style.overflow = id ? "hidden" : "";
+    const isMobile = window.matchMedia("(max-width: 768px)").matches;
+    document.body.style.overflow = id && isMobile ? "hidden" : "";
   },
 );
 </script>

@@ -992,7 +992,9 @@ onUnmounted(() => {
   background-color: var(--bg-card);
   border-radius: 10px;
   padding: 16px;
-  transition: background-color 0.4s ease, border-color 0.4s ease;
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease;
 }
 .stat {
   display: flex;
