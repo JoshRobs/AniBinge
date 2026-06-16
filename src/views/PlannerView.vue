@@ -27,8 +27,19 @@ import AnimeList from "@/components/AnimeList.vue";
 import BingeTimeline from "@/components/BingeTimeline.vue";
 import AnimeDetailPanel from "@/components/AnimeDetailPanel.vue";
 import { usePlannerStore } from "@/stores/plannerStore";
+import { useRoute, useRouter } from "vue-router";
+import { onMounted } from "vue";
 
 const plannerStore = usePlannerStore();
+const route = useRoute();
+const router = useRouter();
+
+onMounted(() => {
+  if (route.query.mode === "binge") {
+    plannerStore.mode = "binge";
+    router.replace({ query: {} });
+  }
+});
 </script>
 
 <style scoped>

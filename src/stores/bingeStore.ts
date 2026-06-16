@@ -4,6 +4,7 @@ import type { Anime } from "@/api/jikanApi";
 import { toPlanned } from "@/utils/anime";
 
 const STORAGE_KEY = "anibinge-binge-list";
+const COMPLETED_KEY = "anibinge-completed-ids";
 
 function loadFromStorage(): Anime[] {
   try {
@@ -18,12 +19,27 @@ function loadFromStorage(): Anime[] {
   }
 }
 
+function loadCompletedFromStorage(): Set<number> {
+  try {
+    const raw = JSON.parse(localStorage.getItem(COMPLETED_KEY) ?? "[]");
+    if (Array.isArray(raw)) return new Set(raw);
+    return new Set();
+  } catch {
+    return new Set();
+  }
+}
+
 export const useBingeStore = defineStore("binge", () => {
   const list = ref<Anime[]>(loadFromStorage());
+  const completedIds = ref<Set<number>>(loadCompletedFromStorage());
 
   watch(list, (val) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(val));
   }, { deep: true });
+
+  watch(completedIds, (val) => {
+    localStorage.setItem(COMPLETED_KEY, JSON.stringify([...val]));
+  });
 
   function has(id: number): boolean {
     return list.value.some((a) => a.id === id);
@@ -35,6 +51,11 @@ export const useBingeStore = defineStore("binge", () => {
 
   function remove(id: number): void {
     list.value = list.value.filter((a) => a.id !== id);
+    if (completedIds.value.has(id)) {
+      const next = new Set(completedIds.value);
+      next.delete(id);
+      completedIds.value = next;
+    }
   }
 
   function toggle(anime: Anime): void {
@@ -52,5 +73,19 @@ export const useBingeStore = defineStore("binge", () => {
     );
   }
 
-  return { list, has, add, remove, toggle, move, sortByEndDate };
+  function isCompleted(id: number): boolean {
+    return completedIds.value.has(id);
+  }
+
+  function toggleComplete(id: number): void {
+    const next = new Set(completedIds.value);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    completedIds.value = next;
+  }
+
+  return { list, has, add, remove, toggle, move, sortByEndDate, isCompleted, toggleComplete };
 });

@@ -43,27 +43,24 @@
 
     <!-- Tab bar -->
     <div class="tab-bar">
-      <button
-        class="tab-btn"
-        :class="{ 'tab-btn--active': activeTab === 'info' }"
-        @click="activeTab = 'info'"
-      >
+      <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'info' }" @click="activeTab = 'info'">
         Info
       </button>
-      <button
-        class="tab-btn"
-        :class="{ 'tab-btn--active': activeTab === 'reviews' }"
-        @click="switchToReviews"
-      >
+      <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'reviews' }" @click="switchToReviews">
         Reviews
-        <span v-if="reviews.length" class="tab-count">{{
-          reviews.length
-        }}</span>
+        <span v-if="reviews.length" class="tab-count">{{ reviews.length }}</span>
+      </button>
+      <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'characters' }" @click="switchToCharacters">
+        Characters
+      </button>
+      <button v-if="trailerEmbedUrl" class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'trailer' }" @click="activeTab = 'trailer'">
+        Trailer
       </button>
     </div>
 
     <!-- Info tab -->
     <template v-if="activeTab === 'info'">
+
       <div class="detail-stats">
         <div class="stat">
           <span class="stat-label">Score</span>
@@ -79,18 +76,22 @@
         </div>
         <div class="stat">
           <span class="stat-label">{{ isStarted(anime) ? "Started" : "Starts" }}</span>
-          <span class="stat-value">{{
-            formatDate(new Date(anime.start_date))
-          }}</span>
+          <span class="stat-value">{{ formatDate(new Date(anime.start_date)) }}</span>
         </div>
         <div class="stat">
           <span class="stat-label">{{ isFinished(anime) ? "Ended" : "Ends" }}</span>
           <span class="stat-value">{{
-            anime.end_date
-              ? formatDate(anime.estimatedEnd)
-              : `~ ${formatDate(anime.estimatedEnd)}`
+            anime.end_date ? formatDate(anime.estimatedEnd) : `~ ${formatDate(anime.estimatedEnd)}`
           }}</span>
           <span v-if="!anime.end_date" class="stat-estimated">estimated</span>
+        </div>
+        <div v-if="details?.studios?.length" class="stat stat--wide">
+          <span class="stat-label">Studio</span>
+          <span class="stat-value">{{ details.studios.join(", ") }}</span>
+        </div>
+        <div v-if="details?.producers?.length" class="stat stat--wide">
+          <span class="stat-label">Producers</span>
+          <span class="stat-value stat-value--muted">{{ details.producers.join(", ") }}</span>
         </div>
       </div>
 
@@ -196,6 +197,44 @@
       </div>
     </template>
 
+    <!-- Characters tab -->
+    <template v-else-if="activeTab === 'characters'">
+      <div v-if="charactersLoading" class="reviews-loading">
+        <div class="reviews-spinner" />
+        <span>Loading characters…</span>
+      </div>
+      <div v-else-if="!characters.length" class="reviews-empty">No character data available.</div>
+      <div v-else class="character-grid">
+        <div
+          v-for="char in characters"
+          :key="char.id"
+          class="character-card"
+          @click="openCharacterModal(char)"
+        >
+          <img v-if="char.image" :src="char.image" :alt="char.name" class="char-img" />
+          <div v-else class="char-img char-img--empty" />
+          <div class="char-info">
+            <p class="char-name">{{ char.name }}</p>
+            <p class="char-role">{{ char.role }}</p>
+            <p v-if="jaVA(char)" class="char-va">{{ jaVA(char)!.name }}</p>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Trailer tab -->
+    <template v-else-if="activeTab === 'trailer'">
+      <div class="trailer-wrap">
+        <iframe
+          :src="trailerEmbedUrl!"
+          class="trailer-iframe"
+          frameborder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        />
+      </div>
+    </template>
+
     <!-- Reviews tab -->
     <template v-else>
       <div v-if="reviewsLoading" class="reviews-loading">
@@ -278,17 +317,73 @@
 
   <!-- Cover image modal -->
   <Teleport to="body">
-    <div
-      v-if="coverModalOpen"
-      class="cover-modal-backdrop"
-      @click="coverModalOpen = false"
-    >
-      <img
-        :src="anime?.image"
-        :alt="anime?.title"
-        class="cover-modal-img"
-        @click.stop
-      />
+    <div v-if="coverModalOpen" class="cover-modal-backdrop" @click="coverModalOpen = false">
+      <img :src="anime?.image" :alt="anime?.title" class="cover-modal-img" @click.stop />
+    </div>
+  </Teleport>
+
+  <!-- Character modal -->
+  <Teleport to="body">
+    <div v-if="selectedCharacter" class="char-modal-backdrop" @click="closeCharacterModal">
+      <div class="char-modal" @click.stop>
+        <button class="char-modal-close" @click="closeCharacterModal" aria-label="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+
+        <div class="char-modal-body">
+          <!-- Portrait -->
+          <img
+            :src="characterInfo?.largeImage ?? selectedCharacter.image"
+            :alt="selectedCharacter.name"
+            class="char-modal-portrait"
+          />
+
+          <!-- Info -->
+          <div class="char-modal-content">
+            <div class="char-modal-heading">
+              <h2 class="char-modal-name">{{ selectedCharacter.name }}</h2>
+              <p v-if="characterInfo?.nameKanji" class="char-modal-kanji">{{ characterInfo.nameKanji }}</p>
+              <span class="char-modal-role">{{ selectedCharacter.role }}</span>
+            </div>
+
+            <div v-if="characterInfo?.nicknames?.length" class="char-modal-nicknames">
+              <span v-for="n in characterInfo.nicknames" :key="n" class="nickname-tag">{{ n }}</span>
+            </div>
+
+            <!-- Voice actors -->
+            <div v-if="selectedCharacter.voiceActors.length" class="char-modal-section">
+              <h3 class="char-modal-section-title">Voice Actors</h3>
+              <div class="va-grid">
+                <div v-for="va in selectedCharacter.voiceActors" :key="va.id" class="va-card">
+                  <img v-if="va.image" :src="va.image" :alt="va.name" class="va-img" />
+                  <div v-else class="va-img va-img--empty" />
+                  <div class="va-info">
+                    <p class="va-name">{{ va.name }}</p>
+                    <p class="va-lang">{{ va.language }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- About -->
+            <div v-if="characterInfoLoading" class="char-modal-loading">
+              <div class="reviews-spinner" /> Loading…
+            </div>
+            <div v-else-if="characterInfo?.about" class="char-modal-section">
+              <h3 class="char-modal-section-title">About</h3>
+              <p
+                class="char-modal-about"
+                :class="{ 'char-modal-about--clamped': !aboutExpanded }"
+              >{{ stripBBCode(characterInfo.about) }}</p>
+              <button v-if="!aboutExpanded" class="review-expand-btn" @click="aboutExpanded = true">
+                Read more
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </Teleport>
 </template>
@@ -302,13 +397,17 @@ const LOGO_OVERRIDES: Record<string, string> = {
 };
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useBingeStore } from "@/stores/bingeStore";
-import { fetchAnimeReviews } from "@/api/jikanApi";
-import type { AnimeReview } from "@/api/jikanApi";
+import {
+  fetchAnimeReviews,
+  fetchAnimeDetails,
+  fetchAnimeCharacters,
+  fetchCharacterInfo,
+} from "@/api/jikanApi";
+import type { AnimeReview, AnimeDetails, Character, CharacterInfo } from "@/api/jikanApi";
 import { toPlanned, formatDate, scoreColor, isStarted, isFinished } from "@/utils/anime";
 
 const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
-
 
 const anime = computed(() => {
   const id = plannerStore.selectedAnimeId;
@@ -319,50 +418,44 @@ const anime = computed(() => {
   return fromBinge ? toPlanned(fromBinge) : null;
 });
 
-// Tabs
-const activeTab = ref<"info" | "reviews">("info");
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+const activeTab = ref<"info" | "reviews" | "characters" | "trailer">("info");
 
-// Reviews state
+// ── Details (studios, producers, trailer) ─────────────────────────────────────
+const details = ref<AnimeDetails | null>(null);
+const detailsCache = new Map<number, AnimeDetails | null>();
+
+async function loadDetails(id: number) {
+  if (detailsCache.has(id)) {
+    details.value = detailsCache.get(id) ?? null;
+    return;
+  }
+  const result = await fetchAnimeDetails(id);
+  detailsCache.set(id, result);
+  if (anime.value?.id === id) details.value = result;
+}
+
+const trailerEmbedUrl = computed(() => {
+  const yid = details.value?.trailer?.youtubeId;
+  if (!yid) return null;
+  return `https://www.youtube-nocookie.com/embed/${yid}?rel=0&modestbranding=1`;
+});
+
+// ── Reviews ───────────────────────────────────────────────────────────────────
 const reviews = ref<AnimeReview[]>([]);
 const reviewsLoading = ref(false);
 const reviewsError = ref(false);
 const reviewsFetchedFor = ref<number | null>(null);
 const expandedReviews = ref(new Set<number>());
 const expandedSpoilers = ref(new Set<number>());
-const synopsisExpanded = ref(false);
-const synopsisIsClamped = ref(false);
-const synopsisEl = ref<HTMLElement | null>(null);
-const failedLogos = ref<string[]>([]);
-const coverModalOpen = ref(false);
 
-const uniqueStreaming = computed(() => {
-  const seen = new Set<string>();
-  return (anime.value?.streaming ?? []).filter((s) => {
-    if (seen.has(s.name)) return false;
-    seen.add(s.name);
-    return true;
-  });
-});
-
-function onLogoError(name: string) {
-  if (!LOGO_OVERRIDES[name]) failedLogos.value.push(name);
-}
-
-const positiveCount = computed(
-  () => reviews.value.filter((r) => r.score >= 7).length,
-);
-const negativeCount = computed(
-  () => reviews.value.filter((r) => r.score <= 3).length,
-);
+const positiveCount = computed(() => reviews.value.filter((r) => r.score >= 7).length);
+const negativeCount = computed(() => reviews.value.filter((r) => r.score <= 3).length);
 const positivePercent = computed(() =>
-  reviews.value.length
-    ? Math.round((positiveCount.value / reviews.value.length) * 100)
-    : 0,
+  reviews.value.length ? Math.round((positiveCount.value / reviews.value.length) * 100) : 0,
 );
 const negativePercent = computed(() =>
-  reviews.value.length
-    ? Math.round((negativeCount.value / reviews.value.length) * 100)
-    : 0,
+  reviews.value.length ? Math.round((negativeCount.value / reviews.value.length) * 100) : 0,
 );
 
 async function loadReviews(id: number) {
@@ -384,10 +477,88 @@ function switchToReviews() {
   if (anime.value) loadReviews(anime.value.id);
 }
 
-// Reset when anime changes
+// ── Characters ────────────────────────────────────────────────────────────────
+const characters = ref<Character[]>([]);
+const charactersLoading = ref(false);
+const charactersCache = new Map<number, Character[]>();
+
+async function switchToCharacters() {
+  activeTab.value = "characters";
+  const id = anime.value?.id;
+  if (!id) return;
+  if (charactersCache.has(id)) {
+    characters.value = charactersCache.get(id)!;
+    return;
+  }
+  charactersLoading.value = true;
+  const result = await fetchAnimeCharacters(id);
+  charactersCache.set(id, result);
+  if (anime.value?.id === id) {
+    characters.value = result;
+    charactersLoading.value = false;
+  }
+}
+
+// ── Character modal ───────────────────────────────────────────────────────────
+const selectedCharacter = ref<Character | null>(null);
+const characterInfo = ref<CharacterInfo | null>(null);
+const characterInfoLoading = ref(false);
+const characterInfoCache = new Map<number, CharacterInfo | null>();
+const aboutExpanded = ref(false);
+
+async function openCharacterModal(char: Character) {
+  selectedCharacter.value = char;
+  characterInfo.value = null;
+  aboutExpanded.value = false;
+  if (characterInfoCache.has(char.id)) {
+    characterInfo.value = characterInfoCache.get(char.id) ?? null;
+    return;
+  }
+  characterInfoLoading.value = true;
+  const info = await fetchCharacterInfo(char.id);
+  characterInfoCache.set(char.id, info);
+  if (selectedCharacter.value?.id === char.id) {
+    characterInfo.value = info;
+    characterInfoLoading.value = false;
+  }
+}
+
+function closeCharacterModal() {
+  selectedCharacter.value = null;
+  characterInfo.value = null;
+}
+
+function stripBBCode(text: string): string {
+  return text
+    .replace(/\[url=[^\]]*\](.*?)\[\/url\]/gi, "$1")
+    .replace(/\[\/?(b|i|u|h[1-6])\]/gi, "")
+    .trim();
+}
+
+// ── Shared UI state ───────────────────────────────────────────────────────────
+const synopsisExpanded = ref(false);
+const synopsisIsClamped = ref(false);
+const synopsisEl = ref<HTMLElement | null>(null);
+const failedLogos = ref<string[]>([]);
+const coverModalOpen = ref(false);
+
+const uniqueStreaming = computed(() => {
+  const seen = new Set<string>();
+  return (anime.value?.streaming ?? []).filter((s) => {
+    if (seen.has(s.name)) return false;
+    seen.add(s.name);
+    return true;
+  });
+});
+
+function onLogoError(name: string) {
+  if (!LOGO_OVERRIDES[name]) failedLogos.value.push(name);
+}
+
+// ── Reset when anime changes ──────────────────────────────────────────────────
 watch(
   () => anime.value?.id,
-  async () => {
+  async (id) => {
     activeTab.value = "info";
     reviews.value = [];
     reviewsFetchedFor.value = null;
@@ -397,11 +568,17 @@ watch(
     synopsisIsClamped.value = false;
     failedLogos.value = [];
     coverModalOpen.value = false;
+    details.value = null;
+    characters.value = [];
+    charactersLoading.value = false;
+    selectedCharacter.value = null;
+    characterInfo.value = null;
+
     await nextTick();
     if (synopsisEl.value) {
-      synopsisIsClamped.value =
-        synopsisEl.value.scrollHeight > synopsisEl.value.clientHeight;
+      synopsisIsClamped.value = synopsisEl.value.scrollHeight > synopsisEl.value.clientHeight;
     }
+    if (id) loadDetails(id);
   },
 );
 
@@ -411,7 +588,11 @@ function reviewScoreClass(score: number) {
   return "review-score--mid";
 }
 
-// Panel resize
+function jaVA(char: Character) {
+  return char.voiceActors.find((v) => v.language === "Japanese");
+}
+
+// ── Panel resize ──────────────────────────────────────────────────────────────
 const panelWidth = ref(440);
 let startX = 0;
 let startWidth = 0;
@@ -435,7 +616,10 @@ function stopResize() {
 }
 
 function onKeyDown(e: KeyboardEvent) {
-  if (e.key === "Escape") coverModalOpen.value = false;
+  if (e.key === "Escape") {
+    if (selectedCharacter.value) closeCharacterModal();
+    else coverModalOpen.value = false;
+  }
 }
 
 window.addEventListener("keydown", onKeyDown);
@@ -443,7 +627,6 @@ onUnmounted(() => {
   stopResize();
   window.removeEventListener("keydown", onKeyDown);
 });
-
 </script>
 
 <style scoped>
@@ -772,6 +955,89 @@ onUnmounted(() => {
   opacity: 1;
 }
 
+/* ── Stats extras ── */
+.stat--wide {
+  grid-column: 1 / -1;
+}
+.stat-value--muted {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9ca3af;
+}
+
+/* ── Character cards (in list) ── */
+.character-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.character-card {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 10px;
+  min-width: 0;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.character-card:hover {
+  border-color: var(--accent);
+  background-color: color-mix(in srgb, var(--accent) 6%, var(--bg-card));
+}
+.char-img {
+  width: 44px;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.char-img--empty {
+  background-color: var(--bg-deep);
+}
+.char-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.char-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e5e7eb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.char-role {
+  font-size: 10px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.char-va {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Trailer ── */
+.trailer-wrap {
+  width: 100%;
+}
+.trailer-iframe {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 8px;
+  border: none;
+  background: #000;
+}
+
 /* Reviews */
 .reviews-loading {
   display: flex;
@@ -954,6 +1220,194 @@ onUnmounted(() => {
 }
 .review-expand-btn:hover {
   opacity: 1;
+}
+
+/* ── Character modal ── */
+.char-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.char-modal {
+  position: relative;
+  background-color: var(--bg-header);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  max-width: 680px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+}
+.char-modal::-webkit-scrollbar { display: none; }
+
+.char-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  color: #9ca3af;
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s, border-color 0.15s;
+  z-index: 1;
+}
+.char-modal-close:hover {
+  color: white;
+  border-color: var(--accent);
+}
+
+.char-modal-body {
+  display: flex;
+  gap: 24px;
+  padding: 28px;
+}
+.char-modal-portrait {
+  width: 140px;
+  flex-shrink: 0;
+  aspect-ratio: 2/3;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.char-modal-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.char-modal-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 36px;
+}
+.char-modal-name {
+  font-size: 22px;
+  font-weight: 700;
+  color: #f3f4f6;
+  line-height: 1.2;
+}
+.char-modal-kanji {
+  font-size: 14px;
+  color: #9ca3af;
+}
+.char-modal-role {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.char-modal-nicknames {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.nickname-tag {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-input);
+  color: #9ca3af;
+}
+
+.char-modal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.char-modal-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.va-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.va-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 8px 12px 8px 8px;
+}
+.va-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.va-img--empty {
+  background-color: var(--bg-deep);
+}
+.va-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.va-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e5e7eb;
+  white-space: nowrap;
+}
+.va-lang {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.char-modal-about {
+  font-size: 13px;
+  color: #9ca3af;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.char-modal-about--clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.char-modal-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #6b7280;
 }
 
 .review-footer {
