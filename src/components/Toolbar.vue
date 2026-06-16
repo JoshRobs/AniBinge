@@ -6,11 +6,18 @@
     <div class="toolbar-inner max-w-350 mx-auto">
       <!-- Logo -->
       <button class="logo-btn" @click="goHome">
-        Ani<span style="color: var(--accent)" class="transition-colors duration-400">Binge</span>
+        Ani<span
+          style="color: var(--accent)"
+          class="transition-colors duration-400"
+          >Binge</span
+        >
       </button>
 
       <!-- Search (desktop: inline; mobile: full-width row, hidden in binge mode) -->
-      <div class="search-wrap" :class="{ 'search-wrap--binge': plannerStore.mode === 'binge' }">
+      <div
+        class="search-wrap"
+        :class="{ 'search-wrap--binge': plannerStore.mode === 'binge' }"
+      >
         <svg
           class="search-icon"
           xmlns="http://www.w3.org/2000/svg"
@@ -21,7 +28,8 @@
           stroke-linecap="round"
           stroke-linejoin="round"
         >
-          <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          <circle cx="11" cy="11" r="8" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
         <input
           type="text"
@@ -46,7 +54,8 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -60,12 +69,35 @@
           @click="copyShareLink"
           title="Copy share link"
         >
-          <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          <svg
+            v-if="!copied"
+            xmlns="http://www.w3.org/2000/svg"
+            class="share-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            class="share-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12" />
           </svg>
           <span class="share-label">{{ copied ? "Copied!" : "Share" }}</span>
         </button>
@@ -81,6 +113,12 @@
       </div>
     </div>
   </header>
+
+  <Teleport to="body">
+    <Transition name="toast">
+      <div v-if="toastVisible" class="toast">Link copied to clipboard</div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -95,6 +133,8 @@ const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
 
 const copied = ref(false);
+const toastVisible = ref(false);
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 function goHome() {
   plannerStore.mode = plannerStore.mode === "explore" ? "binge" : "explore";
@@ -108,12 +148,34 @@ function onInput(e: Event) {
   searchStore.setQuery(value);
 }
 
+function showToast() {
+  toastVisible.value = true;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastVisible.value = false;
+  }, 2500);
+}
+
 async function copyShareLink() {
   const ids = bingeStore.list.map((a) => a.id).join(",");
   const url = `${window.location.origin}/share?ids=${ids}`;
-  await navigator.clipboard.writeText(url);
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    // Fallback for browsers that block clipboard API
+    const ta = document.createElement("textarea");
+    ta.value = url;
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
   copied.value = true;
-  setTimeout(() => { copied.value = false; }, 2000);
+  showToast();
+  setTimeout(() => {
+    copied.value = false;
+  }, 2000);
 }
 </script>
 
@@ -161,7 +223,9 @@ async function copyShareLink() {
   text-decoration: none;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: background-color 0.15s, color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
 .kofi-btn:hover {
   background-color: #72a4f2;
@@ -245,7 +309,9 @@ async function copyShareLink() {
   white-space: nowrap;
   flex-shrink: 0;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
 }
 .share-btn:hover {
   border-color: #9ca3af;
@@ -265,6 +331,38 @@ async function copyShareLink() {
   flex-shrink: 0;
 }
 
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+}
+.toast-enter-active,
+.toast-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+}
+
 /* ── Search spinner ── */
 .search-spinner {
   position: absolute;
@@ -277,7 +375,9 @@ async function copyShareLink() {
   animation: spin 0.6s linear infinite;
 }
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Mobile ── */
@@ -289,8 +389,13 @@ async function copyShareLink() {
   }
 
   /* Logo and actions stay on the first row */
-  .logo-btn { order: 1; }
-  .toolbar-actions { order: 2; margin-left: auto; }
+  .logo-btn {
+    order: 1;
+  }
+  .toolbar-actions {
+    order: 2;
+    margin-left: auto;
+  }
 
   /* Search drops to full-width second row */
   .search-wrap {
