@@ -110,7 +110,7 @@
             <button
               class="row-add-btn"
               :class="{ 'row-add-btn--added': bingeStore.has(a.id) }"
-              @click="bingeStore.toggle(anime[i])"
+              @click="bingeStore.toggle(a)"
               @mouseenter="hoveredAddId = a.id"
               @mouseleave="hoveredAddId = null"
               :aria-label="bingeStore.has(a.id) ? 'Remove from my list' : 'Add to my list'"
