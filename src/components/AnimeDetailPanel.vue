@@ -1,5 +1,18 @@
 <template>
-  <div class="detail-panel" v-if="anime" :style="{ width: panelWidth + 'px' }">
+  <div
+    class="detail-panel"
+    ref="panelEl"
+    v-if="anime"
+    :style="{
+      width: panelWidth + 'px',
+      transform: swipeDelta ? `translateY(${swipeDelta}px)` : undefined,
+      transition: swipeTransition,
+    }"
+    @touchstart.passive="onTouchStart"
+    @touchmove="onTouchMove"
+    @touchend.passive="onTouchEnd"
+  >
+    <div class="drag-handle" />
     <div class="resize-handle" @mousedown="startResize" />
 
     <button
@@ -43,25 +56,46 @@
 
     <!-- Tab bar -->
     <div class="tab-bar">
-      <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'info' }" @click="activeTab = 'info'">
+      <button
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === 'info' }"
+        @click="activeTab = 'info'"
+      >
         Info
       </button>
-      <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'reviews' }" @click="switchToReviews">
+      <button
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === 'reviews' }"
+        @click="switchToReviews"
+      >
         Reviews
-        <span v-if="reviews.length" class="tab-count">{{ reviews.length }}</span>
+        <span v-if="reviews.length" class="tab-count">{{
+          reviews.length
+        }}</span>
       </button>
-      <button class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'characters' }" @click="switchToCharacters">
+      <button
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === 'characters' }"
+        @click="switchToCharacters"
+      >
         Characters
       </button>
-      <button v-if="trailerEmbedUrl" class="tab-btn" :class="{ 'tab-btn--active': activeTab === 'trailer' }" @click="activeTab = 'trailer'">
+      <button
+        v-if="trailerEmbedUrl"
+        class="tab-btn"
+        :class="{ 'tab-btn--active': activeTab === 'trailer' }"
+        @click="activeTab = 'trailer'"
+      >
         Trailer
       </button>
     </div>
 
     <!-- Info tab -->
     <template v-if="activeTab === 'info'">
-
-      <div class="detail-stats">
+      <div
+        class="detail-stats"
+        :style="{ border: `2px solid ${statusBorderColor}75` }"
+      >
         <div class="stat">
           <span class="stat-label">Score</span>
           <span class="stat-value" :class="scoreColor(anime.score)">{{
@@ -75,13 +109,21 @@
           }}</span>
         </div>
         <div class="stat">
-          <span class="stat-label">{{ isStarted(anime) ? "Started" : "Starts" }}</span>
-          <span class="stat-value">{{ formatDate(new Date(anime.start_date)) }}</span>
+          <span class="stat-label">{{
+            isStarted(anime) ? "Started" : "Starts"
+          }}</span>
+          <span class="stat-value">{{
+            formatDate(new Date(anime.start_date))
+          }}</span>
         </div>
         <div class="stat">
-          <span class="stat-label">{{ isFinished(anime) ? "Ended" : "Ends" }}</span>
+          <span class="stat-label">{{
+            isFinished(anime) ? "Ended" : "Ends"
+          }}</span>
           <span class="stat-value">{{
-            anime.end_date ? formatDate(anime.estimatedEnd) : `~ ${formatDate(anime.estimatedEnd)}`
+            anime.end_date
+              ? formatDate(anime.estimatedEnd)
+              : `~ ${formatDate(anime.estimatedEnd)}`
           }}</span>
           <span v-if="!anime.end_date" class="stat-estimated">estimated</span>
         </div>
@@ -91,7 +133,9 @@
         </div>
         <div v-if="details?.producers?.length" class="stat stat--wide">
           <span class="stat-label">Producers</span>
-          <span class="stat-value stat-value--muted">{{ details.producers.join(", ") }}</span>
+          <span class="stat-value stat-value--muted">{{
+            details.producers.join(", ")
+          }}</span>
         </div>
       </div>
 
@@ -203,7 +247,9 @@
         <div class="reviews-spinner" />
         <span>Loading characters…</span>
       </div>
-      <div v-else-if="!characters.length" class="reviews-empty">No character data available.</div>
+      <div v-else-if="!characters.length" class="reviews-empty">
+        No character data available.
+      </div>
       <div v-else class="character-grid">
         <div
           v-for="char in characters"
@@ -211,7 +257,12 @@
           class="character-card"
           @click="openCharacterModal(char)"
         >
-          <img v-if="char.image" :src="char.image" :alt="char.name" class="char-img" />
+          <img
+            v-if="char.image"
+            :src="char.image"
+            :alt="char.name"
+            class="char-img"
+          />
           <div v-else class="char-img char-img--empty" />
           <div class="char-info">
             <p class="char-name">{{ char.name }}</p>
@@ -229,7 +280,14 @@
           :src="trailerEmbedUrl!"
           class="trailer-iframe"
           frameborder="0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="
+            accelerometer;
+            autoplay;
+            clipboard-write;
+            encrypted-media;
+            gyroscope;
+            picture-in-picture;
+          "
           allowfullscreen
         />
       </div>
@@ -317,18 +375,40 @@
 
   <!-- Image viewer -->
   <Teleport to="body">
-    <div v-if="imageViewerUrl" class="cover-modal-backdrop" @click="imageViewerUrl = null">
+    <div
+      v-if="imageViewerUrl"
+      class="cover-modal-backdrop"
+      @click="imageViewerUrl = null"
+    >
       <img :src="imageViewerUrl" class="cover-modal-img" @click.stop />
     </div>
   </Teleport>
 
   <!-- Character modal -->
   <Teleport to="body">
-    <div v-if="selectedCharacter" class="char-modal-backdrop" @click="closeCharacterModal">
-      <div class="char-modal" @click.stop>
-        <button class="char-modal-close" @click="closeCharacterModal" aria-label="Close">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    <div
+      v-if="selectedCharacter"
+      class="char-modal-backdrop"
+      @click="closeCharacterModal"
+    >
+      <div class="char-modal" ref="charModalEl" @click.stop>
+        <button
+          class="char-modal-close"
+          @click="closeCharacterModal"
+          aria-label="Close"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-5 h-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
 
@@ -338,27 +418,52 @@
             :src="characterInfo?.largeImage ?? selectedCharacter.image"
             :alt="selectedCharacter.name"
             class="char-modal-portrait"
-            @click="imageViewerUrl = characterInfo?.largeImage ?? selectedCharacter.image"
+            @click="
+              imageViewerUrl =
+                characterInfo?.largeImage ?? selectedCharacter.image
+            "
           />
 
           <!-- Info -->
           <div class="char-modal-content">
             <div class="char-modal-heading">
               <h2 class="char-modal-name">{{ selectedCharacter.name }}</h2>
-              <p v-if="characterInfo?.nameKanji" class="char-modal-kanji">{{ characterInfo.nameKanji }}</p>
+              <p v-if="characterInfo?.nameKanji" class="char-modal-kanji">
+                {{ characterInfo.nameKanji }}
+              </p>
               <span class="char-modal-role">{{ selectedCharacter.role }}</span>
             </div>
 
-            <div v-if="characterInfo?.nicknames?.length" class="char-modal-nicknames">
-              <span v-for="n in characterInfo.nicknames" :key="n" class="nickname-tag">{{ n }}</span>
+            <div
+              v-if="characterInfo?.nicknames?.length"
+              class="char-modal-nicknames"
+            >
+              <span
+                v-for="n in characterInfo.nicknames"
+                :key="n"
+                class="nickname-tag"
+                >{{ n }}</span
+              >
             </div>
 
             <!-- Voice actors -->
-            <div v-if="selectedCharacter.voiceActors.length" class="char-modal-section">
+            <div
+              v-if="selectedCharacter.voiceActors.length"
+              class="char-modal-section char-modal-vas"
+            >
               <h3 class="char-modal-section-title">Voice Actors</h3>
               <div class="va-grid">
-                <div v-for="va in selectedCharacter.voiceActors" :key="va.id" class="va-card">
-                  <img v-if="va.image" :src="va.image" :alt="va.name" class="va-img" />
+                <div
+                  v-for="va in selectedCharacter.voiceActors"
+                  :key="va.id"
+                  class="va-card"
+                >
+                  <img
+                    v-if="va.image"
+                    :src="va.image"
+                    :alt="va.name"
+                    class="va-img"
+                  />
                   <div v-else class="va-img va-img--empty" />
                   <div class="va-info">
                     <p class="va-name">{{ va.name }}</p>
@@ -370,15 +475,22 @@
 
             <!-- About -->
             <div v-if="characterInfoLoading" class="char-modal-loading">
-              <div class="reviews-spinner" /> Loading…
+              <div class="reviews-spinner" />
+              Loading…
             </div>
             <div v-else-if="characterInfo?.about" class="char-modal-section">
               <h3 class="char-modal-section-title">About</h3>
               <p
                 class="char-modal-about"
                 :class="{ 'char-modal-about--clamped': !aboutExpanded }"
-              >{{ stripBBCode(characterInfo.about) }}</p>
-              <button v-if="!aboutExpanded" class="review-expand-btn" @click="aboutExpanded = true">
+              >
+                {{ stripBBCode(characterInfo.about) }}
+              </p>
+              <button
+                v-if="!aboutExpanded"
+                class="review-expand-btn"
+                @click="aboutExpanded = true"
+              >
                 Read more
               </button>
             </div>
@@ -404,8 +516,19 @@ import {
   fetchAnimeCharacters,
   fetchCharacterInfo,
 } from "@/api/jikanApi";
-import type { AnimeReview, AnimeDetails, Character, CharacterInfo } from "@/api/jikanApi";
-import { toPlanned, formatDate, scoreColor, isStarted, isFinished } from "@/utils/anime";
+import type {
+  AnimeReview,
+  AnimeDetails,
+  Character,
+  CharacterInfo,
+} from "@/api/jikanApi";
+import {
+  toPlanned,
+  formatDate,
+  scoreColor,
+  isStarted,
+  isFinished,
+} from "@/utils/anime";
 
 const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
@@ -450,13 +573,21 @@ const reviewsFetchedFor = ref<number | null>(null);
 const expandedReviews = ref(new Set<number>());
 const expandedSpoilers = ref(new Set<number>());
 
-const positiveCount = computed(() => reviews.value.filter((r) => r.score >= 7).length);
-const negativeCount = computed(() => reviews.value.filter((r) => r.score <= 3).length);
+const positiveCount = computed(
+  () => reviews.value.filter((r) => r.score >= 7).length,
+);
+const negativeCount = computed(
+  () => reviews.value.filter((r) => r.score <= 3).length,
+);
 const positivePercent = computed(() =>
-  reviews.value.length ? Math.round((positiveCount.value / reviews.value.length) * 100) : 0,
+  reviews.value.length
+    ? Math.round((positiveCount.value / reviews.value.length) * 100)
+    : 0,
 );
 const negativePercent = computed(() =>
-  reviews.value.length ? Math.round((negativeCount.value / reviews.value.length) * 100) : 0,
+  reviews.value.length
+    ? Math.round((negativeCount.value / reviews.value.length) * 100)
+    : 0,
 );
 
 async function loadReviews(id: number) {
@@ -536,6 +667,18 @@ function stripBBCode(text: string): string {
     .trim();
 }
 
+// ── Status color (mirrors AnimeCard glow) ────────────────────────────────────
+const statusBorderColor = computed(() => {
+  if (!anime.value) return "#6b7280";
+  const now = Date.now();
+  const start = anime.value.start_date
+    ? new Date(anime.value.start_date).getTime()
+    : Infinity;
+  if (start > now) return "#6b7280";
+  if (isFinished(anime.value)) return "#22c55e";
+  return "#f59e0b";
+});
+
 // ── Shared UI state ───────────────────────────────────────────────────────────
 const synopsisExpanded = ref(false);
 const synopsisIsClamped = ref(false);
@@ -577,7 +720,8 @@ watch(
 
     await nextTick();
     if (synopsisEl.value) {
-      synopsisIsClamped.value = synopsisEl.value.scrollHeight > synopsisEl.value.clientHeight;
+      synopsisIsClamped.value =
+        synopsisEl.value.scrollHeight > synopsisEl.value.clientHeight;
     }
     if (id) loadDetails(id);
   },
@@ -591,6 +735,85 @@ function reviewScoreClass(score: number) {
 
 function jaVA(char: Character) {
   return char.voiceActors.find((v) => v.language === "Japanese");
+}
+
+// ── Swipe to dismiss (mobile) ─────────────────────────────────────────────────
+const panelEl = ref<HTMLElement | null>(null);
+const charModalEl = ref<HTMLElement | null>(null);
+
+// Prevent wheel + touch scroll everywhere except inside the char modal when it
+// actually has overflow to scroll. { passive: false } is required for preventDefault().
+function preventScroll(e: Event) {
+  if (
+    selectedCharacter.value &&
+    charModalEl.value?.contains(e.target as Node)
+  ) {
+    const hasOverflow =
+      charModalEl.value.scrollHeight > charModalEl.value.clientHeight;
+    if (hasOverflow) return;
+  }
+  e.preventDefault();
+}
+
+watch([selectedCharacter, imageViewerUrl], ([char, viewer]) => {
+  const open = !!(char || viewer);
+  if (panelEl.value) panelEl.value.style.overflowY = open ? "hidden" : "";
+  if (open) {
+    document.addEventListener("wheel", preventScroll, { passive: false });
+    document.addEventListener("touchmove", preventScroll, { passive: false });
+  } else {
+    document.removeEventListener("wheel", preventScroll);
+    document.removeEventListener("touchmove", preventScroll);
+  }
+});
+const swipeDelta = ref(0);
+const swipeTransition = ref<string | undefined>(undefined);
+let swipeActive = false;
+let swipeStartY = 0;
+
+function onTouchStart(e: TouchEvent) {
+  if (selectedCharacter.value) return;
+  if ((panelEl.value?.scrollTop ?? 0) > 0) return;
+  if (!e.touches[0]) return;
+  swipeStartY = e.touches[0].clientY;
+  swipeActive = false;
+}
+
+function onTouchMove(e: TouchEvent) {
+  if (selectedCharacter.value) return;
+  if ((panelEl.value?.scrollTop ?? 0) > 0) return; // panel is scrolling its own content
+  if (!e.touches[0]) return;
+
+  const dy = e.touches[0].clientY - swipeStartY;
+
+  if (dy < 0) {
+    // Finger moving up = user wants to scroll content down.
+    // Only block propagation if the panel has nothing to scroll.
+    const hasOverflow =
+      (panelEl.value?.scrollHeight ?? 0) > (panelEl.value?.clientHeight ?? 0);
+    if (!hasOverflow) e.preventDefault();
+    return;
+  }
+
+  // Finger moving down = swipe-to-dismiss direction. Take over and block page scroll.
+  e.preventDefault();
+  swipeActive = true;
+  swipeDelta.value = dy;
+}
+
+function onTouchEnd() {
+  if (!swipeActive) return;
+  swipeActive = false;
+  if (swipeDelta.value > 120) {
+    swipeTransition.value = "transform 0.25s ease";
+    swipeDelta.value = window.innerHeight * 1.1;
+    setTimeout(() => {
+      plannerStore.selectedAnimeId = null;
+    }, 260);
+  } else {
+    swipeDelta.value = 0;
+    swipeTransition.value = undefined;
+  }
 }
 
 // ── Panel resize ──────────────────────────────────────────────────────────────
@@ -627,6 +850,7 @@ window.addEventListener("keydown", onKeyDown);
 onUnmounted(() => {
   stopResize();
   window.removeEventListener("keydown", onKeyDown);
+  document.removeEventListener("touchmove", preventScroll);
 });
 </script>
 
@@ -637,6 +861,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   height: 100vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background-color: var(--bg-header);
   border-left: 1px solid var(--border);
   padding: 24px;
@@ -767,7 +992,7 @@ onUnmounted(() => {
   background-color: var(--bg-card);
   border-radius: 10px;
   padding: 16px;
-  transition: background-color 0.4s ease;
+  transition: background-color 0.4s ease, border-color 0.4s ease;
 }
 .stat {
   display: flex;
@@ -917,6 +1142,7 @@ onUnmounted(() => {
   justify-content: center;
   cursor: zoom-out;
   backdrop-filter: blur(4px);
+  touch-action: none;
 }
 .cover-modal-img {
   max-height: 90vh;
@@ -982,7 +1208,9 @@ onUnmounted(() => {
   padding: 10px;
   min-width: 0;
   cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
 }
 .character-card:hover {
   border-color: var(--accent);
@@ -1234,6 +1462,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  touch-action: none;
 }
 .char-modal {
   position: relative;
@@ -1244,10 +1473,14 @@ onUnmounted(() => {
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
   scrollbar-width: none;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
 }
-.char-modal::-webkit-scrollbar { display: none; }
+.char-modal::-webkit-scrollbar {
+  display: none;
+}
 
 .char-modal-close {
   position: absolute;
@@ -1262,7 +1495,9 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
   z-index: 1;
 }
 .char-modal-close:hover {
@@ -1307,6 +1542,8 @@ onUnmounted(() => {
   font-weight: 700;
   color: #f3f4f6;
   line-height: 1.2;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .char-modal-kanji {
   font-size: 14px;
@@ -1437,5 +1674,70 @@ onUnmounted(() => {
   background-color: var(--bg-deep, #0d1015);
   color: #6b7280;
   border: 1px solid var(--border-input);
+}
+
+/* ── Drag handle (mobile only) ── */
+.drag-handle {
+  display: none;
+  width: 36px;
+  height: 4px;
+  background: var(--border-input);
+  border-radius: 2px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+/* ── Mobile bottom sheet ── */
+@media (max-width: 768px) {
+  .drag-handle {
+    display: block;
+  }
+
+  .detail-panel {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 85vh !important;
+    border-left: none !important;
+    border-top: 1px solid var(--border) !important;
+    border-radius: 20px 20px 0 0 !important;
+    z-index: 100;
+    padding-top: 12px !important;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+
+  /* ── Character modal on mobile ── */
+  .char-modal-backdrop {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .char-modal {
+    max-width: 100%;
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+  }
+
+  .char-modal-body {
+    flex-direction: column;
+    padding: 20px;
+    gap: 16px;
+  }
+
+  .char-modal-portrait {
+    width: 110px;
+    align-self: center;
+  }
+
+  /* Push voice actors to bottom of the content column */
+  .char-modal-vas {
+    order: 10;
+  }
 }
 </style>

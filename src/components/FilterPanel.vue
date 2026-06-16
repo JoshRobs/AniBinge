@@ -3,42 +3,21 @@
     class="border-b transition-[background-color,border-color] duration-400"
     style="background-color: var(--bg-header); border-color: var(--border)"
   >
-    <div
-      class="max-w-350 mx-auto px-6 py-4 flex flex-wrap gap-6 items-end justify-between"
-    >
+    <div class="filter-inner max-w-350 mx-auto">
       <div class="flex flex-col gap-1.5">
-        <label
-          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
-          >Season</label
-        >
-        <select
-          v-model="seasonStore.season"
-          @change="onSeasonChange"
-          class="filter-select"
-        >
-          <option v-for="s in seasons" :key="s" :value="s">
-            {{ capitalize(s) }}
-          </option>
+        <label class="filter-label">Season</label>
+        <select v-model="seasonStore.season" @change="onSeasonChange" class="filter-select">
+          <option v-for="s in seasons" :key="s" :value="s">{{ capitalize(s) }}</option>
         </select>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label
-          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
-          >Year</label
-        >
-        <select
-          v-model.number="seasonStore.year"
-          @change="onSeasonChange"
-          class="filter-select"
-        >
+        <label class="filter-label">Year</label>
+        <select v-model.number="seasonStore.year" @change="onSeasonChange" class="filter-select">
           <option v-for="y in years" :key="y" :value="y">{{ y }}</option>
         </select>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label
-          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
-          >Sort By</label
-        >
+        <label class="filter-label">Sort By</label>
         <select v-model="plannerStore.sortBy" class="filter-select">
           <option value="endDate">End Date</option>
           <option value="score">Score</option>
@@ -46,56 +25,36 @@
         </select>
       </div>
       <div class="flex flex-col gap-1.5">
-        <label
-          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
-          >Min Score</label
-        >
+        <label class="filter-label">Min Score</label>
         <select v-model.number="plannerStore.minScore" class="filter-select">
           <option :value="0">Any</option>
-          <option v-for="n in [5, 6, 7, 8, 9]" :key="n" :value="n">
-            {{ n }}+
-          </option>
+          <option v-for="n in [5, 6, 7, 8, 9]" :key="n" :value="n">{{ n }}+</option>
         </select>
       </div>
-      <div class="flex flex-col gap-1.5">
-        <label
-          class="text-[11px] text-gray-400 uppercase tracking-widest font-semibold"
-          >Exclude</label
-        >
+      <div class="flex flex-col gap-1.5 filter-exclude">
+        <label class="filter-label">Exclude</label>
         <div class="flex gap-2">
           <button
             @click="plannerStore.hideUnscored = !plannerStore.hideUnscored"
             :class="plannerStore.hideUnscored ? 'pill-active' : 'pill-inactive'"
             class="pill"
-          >
-            No Score
-          </button>
+          >No Score</button>
           <button
-            @click="
-              plannerStore.hideSingleEpisode = !plannerStore.hideSingleEpisode
-            "
-            :class="
-              plannerStore.hideSingleEpisode ? 'pill-active' : 'pill-inactive'
-            "
+            @click="plannerStore.hideSingleEpisode = !plannerStore.hideSingleEpisode"
+            :class="plannerStore.hideSingleEpisode ? 'pill-active' : 'pill-inactive'"
             class="pill"
-          >
-            OVA/Movie
-          </button>
+          >OVA/Movie</button>
         </div>
       </div>
-      <div class="flex items-end gap-3 ml-auto">
-        <button v-if="plannerStore.mode === 'binge'" class="sort-btn" @click="bingeStore.sortByEndDate()">
+      <div class="filter-actions">
+        <button v-if="plannerStore.mode === 'binge'" class="sort-btn" @click="bingeStore.sortByEndDate()" title="Sort by End Date">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/>
           </svg>
-          Sort by End Date
+          <span class="sort-label">Sort by End Date</span>
         </button>
         <div v-if="plannerStore.mode === 'binge'" ref="exportRef" class="relative">
-          <button
-            class="export-btn"
-            :disabled="exporting"
-            @click="exportOpen = !exportOpen"
-          >
+          <button class="export-btn" :disabled="exporting" @click="exportOpen = !exportOpen">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
@@ -128,56 +87,25 @@
         <div class="mode-toggle">
           <button
             @click="plannerStore.mode = 'explore'"
-            :class="
-              plannerStore.mode === 'explore'
-                ? 'mode-btn-active'
-                : 'mode-btn-inactive'
-            "
+            :class="plannerStore.mode === 'explore' ? 'mode-btn-active' : 'mode-btn-inactive'"
             class="mode-btn"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <rect x="3" y="3" width="7" height="7" />
-              <rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" />
-              <rect x="14" y="14" width="7" height="7" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
+              <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
             </svg>
             Explore
           </button>
           <div class="mode-divider"></div>
           <button
             @click="plannerStore.mode = 'binge'"
-            :class="
-              plannerStore.mode === 'binge'
-                ? 'mode-btn-active'
-                : 'mode-btn-inactive'
-            "
+            :class="plannerStore.mode === 'binge' ? 'mode-btn-active' : 'mode-btn-inactive'"
             class="mode-btn"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="w-4 h-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="8" y1="6" x2="21" y2="6" />
-              <line x1="8" y1="12" x2="21" y2="12" />
-              <line x1="8" y1="18" x2="21" y2="18" />
-              <line x1="3" y1="6" x2="3.01" y2="6" />
-              <line x1="3" y1="12" x2="3.01" y2="12" />
-              <line x1="3" y1="18" x2="3.01" y2="18" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" />
+              <line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" />
+              <line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
             Binge
           </button>
@@ -241,6 +169,32 @@ async function doExport(format: "png" | "pdf" | "clipboard") {
 </script>
 
 <style scoped>
+/* ── Layout ── */
+.filter-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 16px 24px;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.filter-label {
+  font-size: 11px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+/* ── Selects ── */
 .filter-select {
   background-color: var(--bg-card);
   border: 1px solid var(--border-input);
@@ -254,9 +208,7 @@ async function doExport(format: "png" | "pdf" | "clipboard") {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
-  transition:
-    background-color 0.4s ease,
-    border-color 0.15s ease;
+  transition: background-color 0.4s ease, border-color 0.15s ease;
 }
 .filter-select:hover,
 .filter-select:focus {
@@ -267,6 +219,7 @@ option {
   background-color: var(--bg-card);
 }
 
+/* ── Pills ── */
 .pill {
   padding: 7px 12px;
   font-size: 13px;
@@ -274,10 +227,7 @@ option {
   border-radius: 6px;
   border: 1px solid var(--border-input);
   cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   white-space: nowrap;
 }
 .pill-active {
@@ -294,6 +244,7 @@ option {
   border-color: var(--accent);
 }
 
+/* ── Sort button ── */
 .sort-btn {
   display: flex;
   align-items: center;
@@ -314,6 +265,7 @@ option {
   color: white;
 }
 
+/* ── Export ── */
 .export-btn {
   display: flex;
   align-items: center;
@@ -370,6 +322,7 @@ option {
   color: white;
 }
 
+/* ── Mode toggle ── */
 .mode-toggle {
   display: flex;
   border-radius: 8px;
@@ -386,9 +339,7 @@ option {
   font-weight: 600;
   cursor: pointer;
   border: none;
-  transition:
-    background-color 0.3s ease,
-    color 0.3s ease;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 .mode-btn-active {
   background-color: var(--accent);
@@ -405,5 +356,52 @@ option {
   width: 1px;
   background-color: var(--border-input);
   transition: background-color 0.4s ease;
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .filter-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px 16px;
+    justify-content: unset;
+  }
+
+  .filter-select {
+    min-width: 0;
+    width: 100%;
+    font-size: 13px;
+  }
+
+  /* Exclude pills and actions each span both columns */
+  .filter-exclude,
+  .filter-actions {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+
+  .filter-actions {
+    justify-content: space-between;
+  }
+
+  /* Export hidden on mobile */
+  .export-btn {
+    display: none;
+  }
+
+  /* Sort: icon only */
+  .sort-label {
+    display: none;
+  }
+  .sort-btn {
+    padding: 7px 9px;
+  }
+
+  /* Compact mode toggle */
+  .mode-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+  }
 }
 </style>

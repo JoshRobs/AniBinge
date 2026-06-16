@@ -3,6 +3,9 @@
     class="relative cursor-pointer"
     @mouseenter="hovered = true"
     @mouseleave="hovered = false"
+    @touchstart.passive="hovered = true"
+    @touchend.passive="hovered = false"
+    @touchcancel.passive="hovered = false"
     @click="
       plannerStore.selectedAnimeId =
         plannerStore.selectedAnimeId === anime.id ? null : anime.id
@@ -91,6 +94,10 @@
         class="mt-0.5 text-xs text-gray-500 leading-snug line-clamp-1"
       >
         {{ anime.title }}
+      </p>
+      <p class="card-end-date" :style="{ color: endDateColor }">
+        {{ isFinished(anime) ? 'Ended' : anime.end_date ? 'Ends' : 'Ends ~' }}
+        {{ formatDate(anime.estimatedEnd) }}
       </p>
     </div>
 
@@ -283,5 +290,22 @@ const endDateColor = computed(() => {
 .popup-leave-to {
   opacity: 0;
   transform: translateX(-6px);
+}
+
+.card-end-date {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .popup {
+    display: none;
+  }
+
+  .card-end-date {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 600;
+  }
 }
 </style>

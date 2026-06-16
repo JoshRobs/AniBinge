@@ -1,13 +1,16 @@
 <template>
   <header
-    class="border-b px-6 py-4 transition-[background-color,border-color] duration-400"
+    class="border-b transition-[background-color,border-color] duration-400"
     style="background-color: var(--bg-header); border-color: var(--border)"
   >
-    <div class="max-w-350 mx-auto flex items-center gap-6">
+    <div class="toolbar-inner max-w-350 mx-auto">
+      <!-- Logo -->
       <button class="logo-btn" @click="goHome">
         Ani<span style="color: var(--accent)" class="transition-colors duration-400">Binge</span>
       </button>
-      <div class="search-wrap">
+
+      <!-- Search (desktop: inline; mobile: full-width row, hidden in binge mode) -->
+      <div class="search-wrap" :class="{ 'search-wrap--binge': plannerStore.mode === 'binge' }">
         <svg
           class="search-icon"
           xmlns="http://www.w3.org/2000/svg"
@@ -47,33 +50,37 @@
           </svg>
         </button>
       </div>
-      <button
-        v-if="plannerStore.mode === 'binge' && bingeStore.list.length > 0"
-        class="share-btn"
-        :class="{ 'share-btn--copied': copied }"
-        @click="copyShareLink"
-        title="Copy share link"
-      >
-        <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-        </svg>
-        <svg v-else xmlns="http://www.w3.org/2000/svg" class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-        {{ copied ? "Copied!" : "Share" }}
-      </button>
-      <a
-        href="https://ko-fi.com/S1X221F6YG"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="kofi-btn"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="kofi-icon" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-        </svg>
-        Buy me a coffee
-      </a>
+
+      <!-- Actions: share + ko-fi -->
+      <div class="toolbar-actions">
+        <button
+          v-if="bingeStore.list.length > 0"
+          class="share-btn"
+          :class="{ 'share-btn--copied': copied }"
+          @click="copyShareLink"
+          title="Copy share link"
+        >
+          <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="share-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span class="share-label">{{ copied ? "Copied!" : "Share" }}</span>
+        </button>
+        <a
+          href="https://ko-fi.com/S1X221F6YG"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="kofi-btn"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="kofi-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+          </svg>
+          Buy me a coffee
+        </a>
+      </div>
     </div>
   </header>
 </template>
@@ -112,6 +119,23 @@ async function copyShareLink() {
 </script>
 
 <style scoped>
+/* ── Layout ── */
+.toolbar-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 24px;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ── Logo ── */
 .logo-btn {
   font-size: 1.25rem;
   font-weight: 700;
@@ -124,6 +148,7 @@ async function copyShareLink() {
   padding: 0;
 }
 
+/* ── Ko-fi ── */
 .kofi-btn {
   display: flex;
   align-items: center;
@@ -149,10 +174,12 @@ async function copyShareLink() {
   flex-shrink: 0;
 }
 
+/* ── Search ── */
 .search-wrap {
   position: relative;
   flex: 1;
   max-width: 400px;
+  min-width: 0;
   display: flex;
   align-items: center;
 }
@@ -166,11 +193,12 @@ async function copyShareLink() {
 }
 .search-input {
   width: 100%;
+  min-width: 0;
   background-color: var(--bg-card);
   border: 1px solid var(--border-input);
   border-radius: 8px;
   padding: 7px 36px;
-  font-size: 14px;
+  font-size: 16px; /* 16px prevents iOS auto-zoom */
   color: #f3f4f6;
   outline: none;
   transition: border-color 0.15s;
@@ -202,6 +230,8 @@ async function copyShareLink() {
 .search-clear:hover {
   color: #e5e7eb;
 }
+
+/* ── Share ── */
 .share-btn {
   display: flex;
   align-items: center;
@@ -236,6 +266,7 @@ async function copyShareLink() {
   flex-shrink: 0;
 }
 
+/* ── Search spinner ── */
 .search-spinner {
   position: absolute;
   right: 10px;
@@ -247,8 +278,40 @@ async function copyShareLink() {
   animation: spin 0.6s linear infinite;
 }
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
+  to { transform: rotate(360deg); }
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .toolbar-inner {
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    gap: 10px;
+  }
+
+  /* Logo and actions stay on the first row */
+  .logo-btn { order: 1; }
+  .toolbar-actions { order: 2; margin-left: auto; }
+
+  /* Search drops to full-width second row */
+  .search-wrap {
+    order: 3;
+    flex: none;
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Ko-fi hidden on mobile */
+  .kofi-btn {
+    display: none;
+  }
+
+  /* Share: icon only */
+  .share-label {
+    display: none;
+  }
+  .share-btn {
+    padding: 7px 9px;
   }
 }
 </style>

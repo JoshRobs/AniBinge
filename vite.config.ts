@@ -20,11 +20,9 @@ export default defineConfig({
       allow: [".."], // allow serving files from parent folder
     },
     proxy: {
-      "/api": {
-        target: "http://localhost:3000",
+      "/season": {
+        target: "http://localhost:8787",
         changeOrigin: true,
-        // optionally remove /api if backend doesn’t expect it
-        // rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
