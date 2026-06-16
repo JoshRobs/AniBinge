@@ -28,7 +28,7 @@
         :src="anime.image"
         :alt="anime.title"
         class="detail-cover"
-        @click="coverModalOpen = true"
+        @click="imageViewerUrl = anime.image"
       />
       <div class="detail-titles">
         <h2 class="detail-title">{{ anime.title_english ?? anime.title }}</h2>
@@ -315,10 +315,10 @@
     </template>
   </div>
 
-  <!-- Cover image modal -->
+  <!-- Image viewer -->
   <Teleport to="body">
-    <div v-if="coverModalOpen" class="cover-modal-backdrop" @click="coverModalOpen = false">
-      <img :src="anime?.image" :alt="anime?.title" class="cover-modal-img" @click.stop />
+    <div v-if="imageViewerUrl" class="cover-modal-backdrop" @click="imageViewerUrl = null">
+      <img :src="imageViewerUrl" class="cover-modal-img" @click.stop />
     </div>
   </Teleport>
 
@@ -338,6 +338,7 @@
             :src="characterInfo?.largeImage ?? selectedCharacter.image"
             :alt="selectedCharacter.name"
             class="char-modal-portrait"
+            @click="imageViewerUrl = characterInfo?.largeImage ?? selectedCharacter.image"
           />
 
           <!-- Info -->
@@ -540,7 +541,7 @@ const synopsisExpanded = ref(false);
 const synopsisIsClamped = ref(false);
 const synopsisEl = ref<HTMLElement | null>(null);
 const failedLogos = ref<string[]>([]);
-const coverModalOpen = ref(false);
+const imageViewerUrl = ref<string | null>(null);
 
 const uniqueStreaming = computed(() => {
   const seen = new Set<string>();
@@ -567,7 +568,7 @@ watch(
     synopsisExpanded.value = false;
     synopsisIsClamped.value = false;
     failedLogos.value = [];
-    coverModalOpen.value = false;
+    imageViewerUrl.value = null;
     details.value = null;
     characters.value = [];
     charactersLoading.value = false;
@@ -618,7 +619,7 @@ function stopResize() {
 function onKeyDown(e: KeyboardEvent) {
   if (e.key === "Escape") {
     if (selectedCharacter.value) closeCharacterModal();
-    else coverModalOpen.value = false;
+    else imageViewerUrl.value = null;
   }
 }
 
@@ -909,7 +910,7 @@ onUnmounted(() => {
 .cover-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 1100;
   background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
@@ -1280,6 +1281,12 @@ onUnmounted(() => {
   aspect-ratio: 2/3;
   object-fit: cover;
   border-radius: 10px;
+  align-self: flex-start;
+  cursor: zoom-in;
+  transition: opacity 0.15s;
+}
+.char-modal-portrait:hover {
+  opacity: 0.85;
 }
 .char-modal-content {
   flex: 1;
