@@ -1,6 +1,6 @@
 import { defineStore } from "pinia";
 import { useAnimeStore } from "./animeStore";
-import { toPlanned } from "@/utils/anime";
+import { toPlanned, isFinished } from "@/utils/anime";
 
 export type { PlannedAnime } from "@/utils/anime";
 
@@ -14,6 +14,7 @@ export const usePlannerStore = defineStore("planner", {
     sortBy: "endDate" as "endDate" | "score" | "episodes",
     hideUnscored: true,
     hideSingleEpisode: true,
+    hideAiring: false,
   }),
 
   getters: {
@@ -27,6 +28,7 @@ export const usePlannerStore = defineStore("planner", {
         .filter((a) => !state.hideSingleEpisode || a.episodes !== 1)
         .filter((a) => a.episodes <= state.maxEpisodes)
         .map(toPlanned)
+        .filter((a) => !state.hideAiring || isFinished(a))
         .sort((a, b) => {
           if (!a.score && b.score) return 1;
           if (a.score && !b.score) return -1;

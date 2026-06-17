@@ -44,6 +44,11 @@
             :class="plannerStore.hideSingleEpisode ? 'pill-active' : 'pill-inactive'"
             class="pill"
           >OVA/Movie</button>
+          <button
+            @click="plannerStore.hideAiring = !plannerStore.hideAiring"
+            :class="plannerStore.hideAiring ? 'pill-active' : 'pill-inactive'"
+            class="pill"
+          >Still Airing</button>
         </div>
       </div>
       <div class="filter-actions">
