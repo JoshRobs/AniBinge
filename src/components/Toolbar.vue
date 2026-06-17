@@ -60,47 +60,8 @@
         </button>
       </div>
 
-      <!-- Actions: share + ko-fi -->
+      <!-- Actions: ko-fi -->
       <div class="toolbar-actions">
-        <button
-          v-if="bingeStore.list.length > 0"
-          class="share-btn"
-          :class="{ 'share-btn--copied': copied }"
-          @click="copyShareLink"
-          title="Copy share link"
-        >
-          <svg
-            v-if="!copied"
-            xmlns="http://www.w3.org/2000/svg"
-            class="share-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="18" cy="5" r="3" />
-            <circle cx="6" cy="12" r="3" />
-            <circle cx="18" cy="19" r="3" />
-            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-          </svg>
-          <svg
-            v-else
-            xmlns="http://www.w3.org/2000/svg"
-            class="share-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <span class="share-label">{{ copied ? "Copied!" : "Share" }}</span>
-        </button>
         <a
           href="https://ko-fi.com/S1X221F6YG"
           target="_blank"
@@ -113,28 +74,15 @@
       </div>
     </div>
   </header>
-
-  <Teleport to="body">
-    <Transition name="toast">
-      <div v-if="toastVisible" class="toast">Link copied to clipboard</div>
-    </Transition>
-  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
 import { useSearchStore } from "@/stores/searchStore";
 import { usePlannerStore } from "@/stores/plannerStore";
-import { useBingeStore } from "@/stores/bingeStore";
 import KofiLogo from "@/assets/kofiLogo.svg";
 
 const searchStore = useSearchStore();
 const plannerStore = usePlannerStore();
-const bingeStore = useBingeStore();
-
-const copied = ref(false);
-const toastVisible = ref(false);
-let toastTimer: ReturnType<typeof setTimeout> | null = null;
 
 function goHome() {
   plannerStore.mode = plannerStore.mode === "explore" ? "binge" : "explore";
@@ -146,36 +94,6 @@ function onInput(e: Event) {
     plannerStore.mode = "explore";
   }
   searchStore.setQuery(value);
-}
-
-function showToast() {
-  toastVisible.value = true;
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toastVisible.value = false;
-  }, 2500);
-}
-
-async function copyShareLink() {
-  const ids = bingeStore.list.map((a) => a.id).join(",");
-  const url = `${window.location.origin}/share?ids=${ids}`;
-  try {
-    await navigator.clipboard.writeText(url);
-  } catch {
-    // Fallback for browsers that block clipboard API
-    const ta = document.createElement("textarea");
-    ta.value = url;
-    ta.style.cssText = "position:fixed;opacity:0";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-  }
-  copied.value = true;
-  showToast();
-  setTimeout(() => {
-    copied.value = false;
-  }, 2000);
 }
 </script>
 
@@ -294,75 +212,6 @@ async function copyShareLink() {
   color: #e5e7eb;
 }
 
-/* ── Share ── */
-.share-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: 8px;
-  border: 1px solid var(--border-input);
-  color: #9ca3af;
-  background: none;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition:
-    border-color 0.15s,
-    color 0.15s;
-}
-.share-btn:hover {
-  border-color: #9ca3af;
-  color: #e5e7eb;
-}
-.share-btn--copied {
-  border-color: #22c55e;
-  color: #22c55e;
-}
-.share-btn--copied:hover {
-  border-color: #22c55e;
-  color: #22c55e;
-}
-.share-icon {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-/* ── Toast ── */
-.toast {
-  position: fixed;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1f2937;
-  color: #f3f4f6;
-  border: 1px solid #374151;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  z-index: 9999;
-  pointer-events: none;
-}
-.toast-enter-active,
-.toast-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-.toast-enter-from {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-8px);
-}
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-8px);
-}
-
 /* ── Search spinner ── */
 .search-spinner {
   position: absolute;
@@ -410,14 +259,6 @@ async function copyShareLink() {
     display: none;
   }
   .kofi-btn {
-    padding: 7px 9px;
-  }
-
-  /* Share: icon only */
-  .share-label {
-    display: none;
-  }
-  .share-btn {
     padding: 7px 9px;
   }
 }

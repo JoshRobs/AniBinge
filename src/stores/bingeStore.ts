@@ -87,5 +87,10 @@ export const useBingeStore = defineStore("binge", () => {
     completedIds.value = next;
   }
 
-  return { list, has, add, remove, toggle, move, sortByEndDate, isCompleted, toggleComplete };
+  function clearAll(): void {
+    list.value = [];
+    completedIds.value = new Set();
+  }
+
+  return { list, has, add, remove, toggle, move, sortByEndDate, isCompleted, toggleComplete, clearAll };
 });

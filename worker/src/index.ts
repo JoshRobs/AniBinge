@@ -2,7 +2,8 @@ export interface Env {
   ANIBINGE_CACHE: KVNamespace;
 }
 
-const CACHE_TTL = 60 * 60 * 48; // 48 hours
+const CACHE_TTL_CURRENT  = 60 * 60 * 48;      // 48 hours — current season changes weekly
+const CACHE_TTL_FINISHED = 60 * 60 * 24 * 7;  // 7 days  — finished seasons are essentially static
 const JIKAN_PAGE_DELAY = 500;
 const INFLIGHT_TTL = 120; // seconds — lock auto-expires if a worker crashes mid-fetch
 const POLL_INTERVAL = 1000; // ms between KV checks when waiting on another worker
@@ -165,6 +166,11 @@ async function fetchAniListData(season: string, year: number): Promise<Map<numbe
 
 // ── Core fetch + cache ────────────────────────────────────────────────────────
 
+function seasonTtl(season: string, year: number): number {
+  const cur = currentSeason();
+  return season === cur.season && year === cur.year ? CACHE_TTL_CURRENT : CACHE_TTL_FINISHED;
+}
+
 async function warmSeason(season: string, year: number, env: Env): Promise<void> {
   const [jikanResult, anilistResult] = await Promise.allSettled([
     fetchJikanSeason(season, year),
@@ -188,7 +194,7 @@ async function warmSeason(season: string, year: number, env: Env): Promise<void>
   await env.ANIBINGE_CACHE.put(
     `season:${year}:${season}`,
     JSON.stringify(anime),
-    { expirationTtl: CACHE_TTL }
+    { expirationTtl: seasonTtl(season, year) }
   );
 }
 

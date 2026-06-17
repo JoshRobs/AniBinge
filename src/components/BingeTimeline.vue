@@ -27,6 +27,83 @@
     </div>
 
     <template v-else>
+      <!-- ── Binge toolbar ──────────────────────────────────────────────── -->
+      <div class="binge-toolbar" data-html2canvas-ignore>
+        <button class="btool-btn" @click="bingeStore.sortByEndDate()" title="Sort by End Date">
+          <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/>
+          </svg>
+          <span class="btool-label">Sort by End Date</span>
+        </button>
+
+        <div ref="exportRef" class="btool-export-wrap">
+          <button class="btool-btn" :disabled="exporting" @click="exportOpen = !exportOpen">
+            <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span class="btool-label">{{ exporting ? "Exporting…" : "Export" }}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="btool-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div v-if="exportOpen" class="btool-dropdown">
+            <button class="btool-dropdown-option" @click="doExport('png')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+              </svg>
+              PNG Image
+            </button>
+            <button class="btool-dropdown-option" @click="doExport('pdf')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              PDF Document
+            </button>
+            <button class="btool-dropdown-option" @click="doExport('clipboard')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+              </svg>
+              Copy to Clipboard
+            </button>
+          </div>
+        </div>
+
+        <button
+          class="btool-btn"
+          :class="{ 'btool-btn--copied': copied }"
+          @click="copyShareLink"
+          title="Copy share link"
+        >
+          <svg v-if="!copied" xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span class="btool-label">{{ copied ? "Copied!" : "Share" }}</span>
+        </button>
+
+        <button
+          class="btool-btn btool-btn--danger"
+          :class="{ 'btool-btn--confirming': clearConfirm }"
+          @click="handleClearAll"
+          :title="clearConfirm ? 'Click again to confirm' : 'Clear all anime'"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          <span class="btool-label">{{ clearConfirm ? "Confirm?" : "Clear All" }}</span>
+        </button>
+      </div>
+
+      <Teleport to="body">
+        <Transition name="toast">
+          <div v-if="toastVisible" class="binge-toast">Link copied to clipboard</div>
+        </Transition>
+      </Teleport>
+
       <!-- ── Active items ─────────────────────────────────────────────── -->
       <template v-if="previewItems.length">
         <p class="section-label">Binging Now</p>
@@ -36,13 +113,14 @@
         <TransitionGroup name="binge-list" tag="div" class="binge-all-group">
           <template v-for="(anime, i) in previewItems" :key="anime.id">
             <!-- "Up Next" section label injected before the second row -->
-            <p
+            <div
               v-if="i === 1"
               :key="'__up-next-label__'"
-              class="section-label section-label--next section-label--inline"
+              class="up-next-header section-label--inline"
             >
-              Up Next
-            </p>
+              <p class="section-label section-label--next">Up Next</p>
+              <span class="up-next-count">{{ previewItems.length - 1 }}</span>
+            </div>
 
             <div
               :data-row-index="i"
@@ -143,46 +221,6 @@
                         }}
                       </p>
                     </div>
-                    <div class="row-actions">
-                      <button
-                        class="row-action row-complete"
-                        @click.stop="bingeStore.toggleComplete(anime.id)"
-                        aria-label="Mark as completed"
-                        title="Mark as completed"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="w-8 h-8"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </button>
-                      <button
-                        class="row-action row-remove"
-                        @click.stop="bingeStore.remove(anime.id)"
-                        aria-label="Remove"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="w-8 h-8"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
                   </div>
                 </div>
               </template>
@@ -236,49 +274,49 @@
                         }}
                       </p>
                     </div>
-                    <div class="row-actions">
-                      <button
-                        class="row-action row-complete"
-                        @click.stop="bingeStore.toggleComplete(anime.id)"
-                        aria-label="Mark as completed"
-                        title="Mark as completed"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="w-8 h-8"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </button>
-                      <button
-                        class="row-action row-remove"
-                        @click.stop="bingeStore.remove(anime.id)"
-                        aria-label="Remove"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          class="w-8 h-8"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          stroke-width="2.5"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        >
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                      </button>
-                    </div>
                   </div>
                 </div>
               </template>
+
+              <!-- ── Split action sliver ── -->
+              <div class="row-split-actions">
+                <button
+                  class="row-action row-remove"
+                  @click.stop="bingeStore.remove(anime.id)"
+                  aria-label="Remove"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+                <button
+                  class="row-action row-complete"
+                  @click.stop="bingeStore.toggleComplete(anime.id)"
+                  aria-label="Mark as completed"
+                  title="Mark as completed"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </template>
         </TransitionGroup>
@@ -378,48 +416,47 @@
                   }}
                 </p>
               </div>
-              <div class="row-actions">
-                <button
-                  class="row-action row-unmark"
-                  @click.stop="bingeStore.toggleComplete(anime.id)"
-                  aria-label="Mark as not completed"
-                  title="Move back to list"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <polyline points="1 4 1 10 7 10" />
-                    <path d="M3.51 15a9 9 0 1 0 .49-4.51" />
-                  </svg>
-                </button>
-                <button
-                  class="row-action row-remove"
-                  @click.stop="bingeStore.remove(anime.id)"
-                  aria-label="Remove"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="w-8 h-8"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
-                    <line x1="18" y1="6" x2="6" y2="18" />
-                    <line x1="6" y1="6" x2="18" y2="18" />
-                  </svg>
-                </button>
-              </div>
             </div>
+          </div>
+          <!-- ── Split action sliver ── -->
+          <div class="row-split-actions">
+            <button
+              class="row-action row-remove"
+              @click.stop="bingeStore.remove(anime.id)"
+              aria-label="Remove"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+            <button
+              class="row-action row-unmark"
+              @click.stop="bingeStore.toggleComplete(anime.id)"
+              aria-label="Mark as not completed"
+              title="Move back to list"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 .49-4.51" />
+              </svg>
+            </button>
           </div>
         </div>
       </template>
@@ -428,9 +465,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onUnmounted, nextTick } from "vue";
+import { computed, ref, watch, onUnmounted, nextTick } from "vue";
 import { useBingeStore } from "@/stores/bingeStore";
 import { usePlannerStore } from "@/stores/plannerStore";
+import { exportToPng, exportToPdf, copyToClipboard } from "@/composables/useExport";
 import {
   toPlanned,
   formatDate,
@@ -440,6 +478,83 @@ import {
 
 const bingeStore = useBingeStore();
 const plannerStore = usePlannerStore();
+
+// ── Toolbar: export ───────────────────────────────────────────────────────────
+
+const exportRef = ref<HTMLElement | null>(null);
+const exportOpen = ref(false);
+const exporting = ref(false);
+
+function onExportDocClick(e: MouseEvent) {
+  if (exportRef.value && !exportRef.value.contains(e.target as Node)) {
+    exportOpen.value = false;
+  }
+}
+
+watch(exportOpen, (open) => {
+  if (open) document.addEventListener("click", onExportDocClick);
+  else document.removeEventListener("click", onExportDocClick);
+});
+
+async function doExport(format: "png" | "pdf" | "clipboard") {
+  exportOpen.value = false;
+  exporting.value = true;
+  try {
+    if (format === "png") await exportToPng("binge-timeline");
+    else if (format === "pdf") await exportToPdf("binge-timeline");
+    else await copyToClipboard("binge-timeline");
+  } finally {
+    exporting.value = false;
+  }
+}
+
+// ── Toolbar: share ────────────────────────────────────────────────────────────
+
+const copied = ref(false);
+const toastVisible = ref(false);
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+function showToast() {
+  toastVisible.value = true;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastVisible.value = false; }, 2500);
+}
+
+async function copyShareLink() {
+  const ids = bingeStore.list.map((a) => a.id).join(",");
+  const url = `${window.location.origin}/share?ids=${ids}`;
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = url;
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+  }
+  copied.value = true;
+  showToast();
+  setTimeout(() => { copied.value = false; }, 2000);
+}
+
+// ── Toolbar: clear all ────────────────────────────────────────────────────────
+
+const clearConfirm = ref(false);
+let clearConfirmTimer: ReturnType<typeof setTimeout> | null = null;
+
+function handleClearAll() {
+  if (clearConfirm.value) {
+    bingeStore.clearAll();
+    clearConfirm.value = false;
+    if (clearConfirmTimer) clearTimeout(clearConfirmTimer);
+  } else {
+    clearConfirm.value = true;
+    if (clearConfirmTimer) clearTimeout(clearConfirmTimer);
+    clearConfirmTimer = setTimeout(() => { clearConfirm.value = false; }, 3000);
+  }
+}
 
 const activeItems = computed<PlannedAnime[]>(() =>
   bingeStore.list.filter((a) => !bingeStore.isCompleted(a.id)).map(toPlanned),
@@ -585,6 +700,9 @@ onUnmounted(() => {
   document.removeEventListener("touchmove", onTouchMove);
   document.removeEventListener("touchend", onTouchEnd);
   document.removeEventListener("touchcancel", onTouchEnd);
+  document.removeEventListener("click", onExportDocClick);
+  if (toastTimer) clearTimeout(toastTimer);
+  if (clearConfirmTimer) clearTimeout(clearConfirmTimer);
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -636,6 +754,139 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
 </script>
 
 <style scoped>
+/* ── Binge toolbar ── */
+.binge-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.btool-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  background-color: var(--bg-card);
+  color: #9ca3af;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background-color 0.15s;
+}
+.btool-btn:hover:not(:disabled) {
+  border-color: #9ca3af;
+  color: #e5e7eb;
+}
+.btool-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btool-btn--copied {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+.btool-btn--copied:hover {
+  border-color: #22c55e;
+  color: #22c55e;
+}
+.btool-btn--danger:hover:not(:disabled) {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+.btool-btn--confirming {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+}
+
+.btool-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.btool-chevron {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.btool-export-wrap {
+  position: relative;
+}
+.btool-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background-color: var(--bg-header);
+  border: 1px solid var(--border-input);
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 160px;
+  z-index: 100;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.btool-dropdown-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #d1d5db;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background-color 0.1s,
+    color 0.1s;
+}
+.btool-dropdown-option:hover {
+  background-color: var(--bg-card);
+  color: white;
+}
+
+/* ── Toast ── */
+.binge-toast {
+  position: fixed;
+  top: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2937;
+  color: #f3f4f6;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  z-index: 9999;
+  pointer-events: none;
+}
+.toast-enter-active,
+.toast-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-8px);
+}
+
 .binge-list {
   display: flex;
   flex-direction: column;
@@ -671,6 +922,27 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
 }
 .section-label--next {
   margin-top: 24px;
+}
+
+.up-next-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+.up-next-header .section-label {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.up-next-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  background: rgba(156, 163, 175, 0.12);
+  border: 1px solid rgba(156, 163, 175, 0.25);
+  border-radius: 10px;
+  padding: 1px 7px;
+  line-height: 1.6;
 }
 
 .completed-header {
@@ -711,7 +983,10 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 20px 24px;
+  padding: 20px 24px 20px 24px;
+  padding-right: 108px; /* 24px gap + 84px sliver */
+  position: relative;
+  overflow: hidden;
   border-radius: 10px;
   border: 1px solid var(--border);
   background-color: var(--bg-card);
@@ -905,44 +1180,62 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
   color: #f59e0b;
 }
 
-/* ── Actions ── */
-.row-actions {
+/* ── Split action sliver ── */
+.row-split-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 84px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
 }
 .row-action {
-  flex-shrink: 0;
+  flex: 1;
+  width: 100%;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
 }
-.row-complete {
-  color: #374151;
-}
-.row-complete:hover {
-  color: #22c55e;
-}
-.row-unmark {
-  color: #4b5563;
-}
-.row-unmark:hover {
-  color: #a3e635;
+.row-action svg {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
 }
 .row-remove {
   color: #374151;
 }
 .row-remove:hover {
   color: #ef4444;
+  background-color: rgba(239, 68, 68, 0.08);
+}
+.row-complete {
+  color: #374151;
+}
+.row-complete:hover {
+  color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.08);
+}
+.row-unmark {
+  color: #374151;
+}
+.row-unmark:hover {
+  color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.08);
 }
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
+  .btool-export-wrap {
+    display: none;
+  }
+
   .binge-row {
     padding: 12px 14px;
     gap: 10px;
@@ -1038,12 +1331,15 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
     margin-top: 0;
   }
 
-  .row-action svg {
-    width: 18px;
-    height: 18px;
+  .row-split-actions {
+    width: 50px;
   }
-  .row-action {
-    padding: 3px;
+  .binge-row {
+    padding-right: 50px; /* 14px gap + 50px sliver */
+  }
+  .row-action svg {
+    width: 24px;
+    height: 24px;
   }
 }
 </style>
