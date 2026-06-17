@@ -589,4 +589,127 @@ function importList() {
   padding: 80px 0;
   text-align: center;
 }
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+  .header-inner {
+    max-width: 100%;
+  }
+
+  .main-inner {
+    max-width: 100%;
+    padding: 24px 16px 80px;
+  }
+
+  .page-heading {
+    margin-bottom: 20px;
+  }
+
+  .page-title {
+    font-size: 24px;
+  }
+
+  .page-subtitle {
+    font-size: 15px;
+  }
+
+  .skeleton-row {
+    height: 88px;
+  }
+
+  /* Row: flex → CSS grid with cover | content | button */
+  .row {
+    display: grid;
+    grid-template-columns: 64px 1fr 40px;
+    grid-template-areas:
+      "cover info btn"
+      "cover stats btn";
+    column-gap: 12px;
+    row-gap: 6px;
+    padding: 14px 16px;
+    min-height: unset;
+    align-items: start;
+  }
+
+  .row-number {
+    display: none;
+  }
+
+  .row-cover {
+    grid-area: cover;
+    width: 100%;
+  }
+
+  .row-info {
+    grid-area: info;
+    gap: 4px;
+  }
+
+  .row-title {
+    font-size: 15px;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .row-subtitle {
+    font-size: 13px;
+  }
+
+  /* Cap genre tags at 3 on mobile */
+  .genre-tags .genre-tag:nth-child(n + 4) {
+    display: none;
+  }
+
+  /* Stats: compact horizontal row */
+  .row-stats {
+    grid-area: stats;
+    text-align: left;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0 6px;
+  }
+
+  .stats-label {
+    display: none;
+  }
+
+  .stats-date {
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .stats-date::after {
+    content: " ·";
+    font-weight: 400;
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .stats-eps {
+    font-size: 13px;
+    margin-top: 0;
+  }
+
+  .row-add-btn {
+    grid-area: btn;
+    align-self: center;
+    justify-self: center;
+  }
+
+  /* CTA: stacked, full-width button */
+  .cta-bar {
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+  }
+
+  .cta-btn {
+    justify-content: center;
+  }
+
+  .cta-link {
+    text-align: center;
+  }
+}
 </style>
