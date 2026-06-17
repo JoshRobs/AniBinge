@@ -725,6 +725,7 @@ watch(
     }
     if (id) loadDetails(id);
   },
+  { immediate: true },
 );
 
 function reviewScoreClass(score: number) {
@@ -1034,7 +1035,7 @@ onUnmounted(() => {
   letter-spacing: 0.08em;
 }
 .detail-synopsis {
-  font-size: 14px;
+  font-size: 15px;
   color: #9ca3af;
   line-height: 1.65;
 }
@@ -1047,7 +1048,7 @@ onUnmounted(() => {
 }
 
 .detail-placeholder {
-  font-size: 14px;
+  font-size: 15px;
   color: #4b5563;
   font-style: italic;
 }
@@ -1439,7 +1440,7 @@ onUnmounted(() => {
 }
 .review-expand-btn {
   align-self: flex-start;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--accent);
   background: none;
