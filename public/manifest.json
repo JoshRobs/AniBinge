@@ -1,0 +1,17 @@
+{
+  "name": "AniBinge",
+  "short_name": "AniBinge",
+  "description": "Plan your anime binge-watching order.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b1622",
+  "theme_color": "#0b1622",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

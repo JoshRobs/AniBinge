@@ -160,6 +160,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useHead } from "@unhead/vue";
 import { fetchAnimeById, type Anime } from "@/api/jikanApi";
 import { useBingeStore } from "@/stores/bingeStore";
 import {
@@ -190,6 +191,41 @@ const fetchedCount = ref(0);
 const plannedAnime = computed<PlannedAnime[]>(() => anime.value.map(toPlanned));
 
 const hoveredAddId = ref<number | null>(null);
+
+useHead({
+  title: computed(() =>
+    status.value === "ready"
+      ? `Shared Binge List (${anime.value.length} anime) | AniBinge`
+      : "Shared Binge List | AniBinge"
+  ),
+  meta: [
+    {
+      name: "description",
+      content: computed(() =>
+        status.value === "ready"
+          ? `Check out this anime binge list with ${anime.value.length} titles, shared via AniBinge.ca`
+          : "A shared anime binge list from AniBinge.ca"
+      ),
+    },
+    {
+      property: "og:title",
+      content: computed(() =>
+        status.value === "ready"
+          ? `Shared Binge List (${anime.value.length} anime) | AniBinge`
+          : "Shared Binge List | AniBinge"
+      ),
+    },
+    {
+      property: "og:description",
+      content: computed(() =>
+        status.value === "ready"
+          ? `Check out this anime binge list with ${anime.value.length} titles, shared via AniBinge.ca`
+          : "A shared anime binge list from AniBinge.ca"
+      ),
+    },
+    { property: "og:url", content: `https://anibinge.ca${route.fullPath}` },
+  ],
+});
 
 let cancelled = false;
 onUnmounted(() => {
