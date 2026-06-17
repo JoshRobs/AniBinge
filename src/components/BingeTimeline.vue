@@ -29,12 +29,43 @@
     <template v-else>
       <!-- ── Binge toolbar ──────────────────────────────────────────────── -->
       <div class="binge-toolbar" data-html2canvas-ignore>
-        <button class="btool-btn" @click="bingeStore.sortByEndDate()" title="Sort by End Date">
-          <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/>
-          </svg>
-          <span class="btool-label">Sort by End Date</span>
-        </button>
+        <div ref="sortRef" class="btool-sort-wrap">
+          <button class="btool-btn" @click="sortOpen = !sortOpen">
+            <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/><line x1="3" y1="18" x2="9" y2="18"/>
+            </svg>
+            <span class="btool-label">{{ sortLabel }}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="btool-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div v-if="sortOpen" class="btool-dropdown">
+            <button class="btool-dropdown-option" :class="{ 'btool-dropdown-option--active': bingeStore.bingeSortBy === 'endDate' }" @click="doSort('endDate')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              End Date
+            </button>
+            <button class="btool-dropdown-option" :class="{ 'btool-dropdown-option--active': bingeStore.bingeSortBy === 'score' }" @click="doSort('score')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              Score
+            </button>
+            <button class="btool-dropdown-option" :class="{ 'btool-dropdown-option--active': bingeStore.bingeSortBy === 'episodes' }" @click="doSort('episodes')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+              Episodes
+            </button>
+            <div v-if="bingeStore.bingeSortBy === 'custom'" class="btool-dropdown-option btool-dropdown-option--active btool-dropdown-option--custom">
+              <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="5 9 2 12 5 15"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/>
+              </svg>
+              Custom Order
+            </div>
+          </div>
+        </div>
 
         <div ref="exportRef" class="btool-export-wrap">
           <button class="btool-btn" :disabled="exporting" @click="exportOpen = !exportOpen">
@@ -97,12 +128,6 @@
           <span class="btool-label">{{ clearConfirm ? "Confirm?" : "Clear All" }}</span>
         </button>
       </div>
-
-      <Teleport to="body">
-        <Transition name="toast">
-          <div v-if="toastVisible" class="binge-toast">Link copied to clipboard</div>
-        </Transition>
-      </Teleport>
 
       <!-- ── Active items ─────────────────────────────────────────────── -->
       <template v-if="previewItems.length">
@@ -468,6 +493,7 @@
 import { computed, ref, watch, onUnmounted, nextTick } from "vue";
 import { useBingeStore } from "@/stores/bingeStore";
 import { usePlannerStore } from "@/stores/plannerStore";
+import { useToastStore } from "@/stores/toastStore";
 import { exportToPng, exportToPdf, copyToClipboard } from "@/composables/useExport";
 import {
   toPlanned,
@@ -508,17 +534,42 @@ async function doExport(format: "png" | "pdf" | "clipboard") {
   }
 }
 
+// ── Toolbar: sort ─────────────────────────────────────────────────────────────
+
+const sortRef = ref<HTMLElement | null>(null);
+const sortOpen = ref(false);
+
+const sortLabel = computed(() => {
+  switch (bingeStore.bingeSortBy) {
+    case "score": return "Score";
+    case "episodes": return "Episodes";
+    case "custom": return "Custom Order";
+    default: return "End Date";
+  }
+});
+
+function onSortDocClick(e: MouseEvent) {
+  if (sortRef.value && !sortRef.value.contains(e.target as Node)) {
+    sortOpen.value = false;
+  }
+}
+
+watch(sortOpen, (open) => {
+  if (open) document.addEventListener("click", onSortDocClick);
+  else document.removeEventListener("click", onSortDocClick);
+});
+
+function doSort(val: "endDate" | "score" | "episodes") {
+  sortOpen.value = false;
+  if (val === "endDate") bingeStore.sortByEndDate();
+  else if (val === "score") bingeStore.sortByScore();
+  else if (val === "episodes") bingeStore.sortByEpisodes();
+}
+
 // ── Toolbar: share ────────────────────────────────────────────────────────────
 
+const toastStore = useToastStore();
 const copied = ref(false);
-const toastVisible = ref(false);
-let toastTimer: ReturnType<typeof setTimeout> | null = null;
-
-function showToast() {
-  toastVisible.value = true;
-  if (toastTimer) clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { toastVisible.value = false; }, 2500);
-}
 
 async function copyShareLink() {
   const ids = bingeStore.list.map((a) => a.id).join(",");
@@ -535,7 +586,7 @@ async function copyShareLink() {
     document.body.removeChild(ta);
   }
   copied.value = true;
-  showToast();
+  toastStore.show("Link copied to clipboard", { duration: 2500 });
   setTimeout(() => { copied.value = false; }, 2000);
 }
 
@@ -701,7 +752,7 @@ onUnmounted(() => {
   document.removeEventListener("touchend", onTouchEnd);
   document.removeEventListener("touchcancel", onTouchEnd);
   document.removeEventListener("click", onExportDocClick);
-  if (toastTimer) clearTimeout(toastTimer);
+  document.removeEventListener("click", onSortDocClick);
   if (clearConfirmTimer) clearTimeout(clearConfirmTimer);
 });
 
@@ -817,6 +868,21 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
   flex-shrink: 0;
 }
 
+.btool-sort-wrap {
+  position: relative;
+}
+
+.btool-dropdown-option--active {
+  color: var(--accent);
+}
+.btool-dropdown-option--active:hover {
+  color: var(--accent);
+}
+.btool-dropdown-option--custom {
+  cursor: default;
+  opacity: 0.7;
+}
+
 .btool-export-wrap {
   position: relative;
 }
@@ -855,37 +921,6 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
   color: white;
 }
 
-/* ── Toast ── */
-.binge-toast {
-  position: fixed;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1f2937;
-  color: #f3f4f6;
-  border: 1px solid #374151;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-  z-index: 9999;
-  pointer-events: none;
-}
-.toast-enter-active,
-.toast-leave-active {
-  transition:
-    opacity 0.2s ease,
-    transform 0.2s ease;
-}
-.toast-enter-from {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-8px);
-}
-.toast-leave-to {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-8px);
-}
 
 .binge-list {
   display: flex;
@@ -1267,7 +1302,7 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
   }
 
   .completed-icon {
-    padding-top: 4px;
+    align-self: center;
   }
   .completed-icon svg {
     width: 18px;

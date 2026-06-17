@@ -1,7 +1,8 @@
 <template>
   <div
+    ref="cardEl"
     class="relative cursor-pointer"
-    @mouseenter="hovered = true"
+    @mouseenter="onMouseEnter"
     @mouseleave="hovered = false"
     @touchstart.passive="hovered = true"
     @touchend.passive="hovered = false"
@@ -16,8 +17,8 @@
       :style="{
         aspectRatio: '3/4',
         boxShadow: bingeStore.has(anime.id)
-          ? `0 0 30px 6px ${popupBorderColor}${hovered ? '55' : '00'}, 0 0 0 2px ${popupBorderColor}, 0 0 18px 3px ${popupBorderColor}99`
-          : `0 0 30px 6px ${popupBorderColor}${hovered ? '55' : '00'}`,
+          ? `0 0 30px 6px ${popupBorderColor}${hovered ? '55' : '11'}, 0 0 0 2px ${popupBorderColor}, 0 0 18px 3px ${popupBorderColor}99`
+          : `0 0 30px 6px ${popupBorderColor}${hovered ? '55' : '15'}`,
       }"
     >
       <img
@@ -86,6 +87,7 @@
     <div class="mt-2.5 px-0.5">
       <h3
         class="card-title text-md font-medium leading-snug line-clamp-2 transition-colors duration-150"
+        :style="{ color: titleTintColor }"
       >
         {{ anime.title_english ?? anime.title }}
       </h3>
@@ -96,7 +98,7 @@
         {{ anime.title }}
       </p>
       <p class="card-end-date" :style="{ color: endDateColor }">
-        {{ isFinished(anime) ? 'Ended' : anime.end_date ? 'Ends' : 'Ends ~' }}
+        {{ isFinished(anime) ? "Ended" : anime.end_date ? "Ends" : "Ends ~" }}
         {{ formatDate(anime.estimatedEnd) }}
       </p>
     </div>
@@ -105,6 +107,7 @@
       <div
         v-show="hovered"
         class="popup"
+        :class="{ 'popup--left': flipLeft }"
         :style="{
           borderColor: popupBorderColor,
           boxShadow: `0 8px 32px rgba(0,0,0,0.6), inset 0 0 18px -6px ${popupBorderColor}60`,
@@ -152,6 +155,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from "vue";
+
+const POPUP_WIDTH = 210 + 12; // width + gap
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useBingeStore } from "@/stores/bingeStore";
 import { isFinished, isStarted, scoreColor, formatDate } from "@/utils/anime";
@@ -161,7 +166,17 @@ const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
 const props = defineProps<{ anime: PlannedAnime }>();
 
+const cardEl = ref<HTMLElement | null>(null);
 const hovered = ref(false);
+const flipLeft = ref(false);
+
+function onMouseEnter() {
+  hovered.value = true;
+  if (cardEl.value) {
+    const rect = cardEl.value.getBoundingClientRect();
+    flipLeft.value = rect.right + POPUP_WIDTH > window.innerWidth;
+  }
+}
 
 const popupBorderColor = computed(() => {
   const now = Date.now();
@@ -171,6 +186,17 @@ const popupBorderColor = computed(() => {
   if (start > now) return "#6b7280";
   if (isFinished(props.anime)) return "#22c55e";
   return "#f59e0b";
+});
+
+const titleTintColor = computed(() => {
+  const now = Date.now();
+  const start = props.anime.start_date
+    ? new Date(props.anime.start_date).getTime()
+    : Infinity;
+  if (start > now) return "#f3f4f6";
+  if (isFinished(props.anime))
+    return "color-mix(in srgb, #86efac 35%, #f3f4f6)";
+  return "color-mix(in srgb, #fcd34d 35%, #f3f4f6)";
 });
 
 const endDateColor = computed(() => {
@@ -240,6 +266,10 @@ const endDateColor = computed(() => {
   z-index: 50;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
   pointer-events: none;
+}
+.popup--left {
+  left: auto;
+  right: calc(100% + 12px);
 }
 
 .popup-ends-label {
