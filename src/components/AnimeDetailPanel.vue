@@ -5,6 +5,7 @@
     v-if="anime"
     :style="{
       width: panelWidth + 'px',
+      height: panelHeight,
       transform: swipeDelta ? `translateY(${swipeDelta}px)` : undefined,
       transition: swipeTransition,
     }"
@@ -502,7 +503,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onUnmounted } from "vue";
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import BilibiliTVLogo from "@/assets/BilibiliTV.png";
 
 const LOGO_OVERRIDES: Record<string, string> = {
@@ -738,8 +739,22 @@ function jaVA(char: Character) {
   return char.voiceActors.find((v) => v.language === "Japanese");
 }
 
-// ── Swipe to dismiss (mobile) ─────────────────────────────────────────────────
+// ── Panel height (clips to viewport when header is visible) ───────────────────
 const panelEl = ref<HTMLElement | null>(null);
+const panelHeight = ref('100vh');
+
+function updatePanelHeight() {
+  if (!panelEl.value || window.innerWidth <= 768) return;
+  const top = panelEl.value.getBoundingClientRect().top;
+  panelHeight.value = top > 0 ? `calc(100vh - ${top}px)` : '100vh';
+}
+
+onMounted(() => {
+  updatePanelHeight();
+  window.addEventListener('scroll', updatePanelHeight, { passive: true });
+});
+
+// ── Swipe to dismiss (mobile) ─────────────────────────────────────────────────
 const charModalEl = ref<HTMLElement | null>(null);
 
 // Prevent wheel + touch scroll everywhere except inside the char modal when it
@@ -851,6 +866,7 @@ window.addEventListener("keydown", onKeyDown);
 onUnmounted(() => {
   stopResize();
   window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("scroll", updatePanelHeight);
   document.removeEventListener("touchmove", preventScroll);
 });
 </script>
