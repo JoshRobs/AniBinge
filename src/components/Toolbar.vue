@@ -60,8 +60,20 @@
         </button>
       </div>
 
-      <!-- Actions: ko-fi -->
+      <!-- Actions: feedback + ko-fi -->
       <div class="toolbar-actions">
+        <a
+          href="https://github.com/JoshRobs/AniBinge/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="feedback-btn"
+          title="Report a bug or give feedback"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="feedback-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="feedback-label">Feedback</span>
+        </a>
         <a
           href="https://ko-fi.com/S1X221F6YG"
           target="_blank"
@@ -125,6 +137,32 @@ function onInput(e: Event) {
   color: inherit;
   cursor: pointer;
   padding: 0;
+}
+
+/* ── Feedback ── */
+.feedback-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  color: #9ca3af;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+.feedback-btn:hover {
+  border-color: #9ca3af;
+  color: #e5e7eb;
+}
+.feedback-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
 
 /* ── Ko-fi ── */
@@ -252,6 +290,14 @@ function onInput(e: Event) {
     flex: none;
     width: 100%;
     max-width: none;
+  }
+
+  /* Feedback: icon only on mobile */
+  .feedback-label {
+    display: none;
+  }
+  .feedback-btn {
+    padding: 7px 9px;
   }
 
   /* Ko-fi: icon only on mobile */

@@ -134,10 +134,15 @@ export const useBingeStore = defineStore("binge", () => {
     completedIds.value = new Set();
   }
 
+  function replaceAll(items: Anime[]): void {
+    list.value = [...items];
+    completedIds.value = new Set();
+  }
+
   return {
     list, bingeSortBy,
     has, add, remove, toggle, move,
     sortByEndDate, sortByScore, sortByEpisodes,
-    isCompleted, toggleComplete, clearAll,
+    isCompleted, toggleComplete, clearAll, replaceAll,
   };
 });

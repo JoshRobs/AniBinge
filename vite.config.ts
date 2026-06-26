@@ -21,7 +21,7 @@ export default defineConfig({
     },
     proxy: {
       "/season": {
-        target: "http://localhost:8787",
+        target: "http://localhost:8788",
         changeOrigin: true,
       },
     },

@@ -24,6 +24,12 @@
         Switch to <strong class="text-gray-400">Explore</strong> and hit
         <strong class="text-gray-400">+</strong> on anime to add them here
       </p>
+      <button class="empty-saved-btn" @click="savedListsOpen = true">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+        </svg>
+        Load a saved list
+      </button>
     </div>
 
     <template v-else>
@@ -113,6 +119,17 @@
             <polyline points="20 6 9 17 4 12"/>
           </svg>
           <span class="btool-label">{{ copied ? "Copied!" : "Share" }}</span>
+        </button>
+
+        <button
+          class="btool-btn"
+          @click="savedListsOpen = true"
+          title="Saved Lists"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="btool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="btool-label">Saved Lists</span>
         </button>
 
         <button
@@ -487,12 +504,15 @@
       </template>
     </template>
   </div>
+
+  <SavedListsModal v-if="savedListsOpen" @close="savedListsOpen = false" />
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch, onUnmounted, nextTick } from "vue";
 import { useBingeStore } from "@/stores/bingeStore";
 import { usePlannerStore } from "@/stores/plannerStore";
+import SavedListsModal from "@/components/SavedListsModal.vue";
 import { useToastStore } from "@/stores/toastStore";
 import { exportToPng, exportToPdf, copyToClipboard } from "@/composables/useExport";
 import {
@@ -593,6 +613,7 @@ async function copyShareLink() {
 // ── Toolbar: clear all ────────────────────────────────────────────────────────
 
 const clearConfirm = ref(false);
+const savedListsOpen = ref(false);
 let clearConfirmTimer: ReturnType<typeof setTimeout> | null = null;
 
 function handleClearAll() {
@@ -935,6 +956,25 @@ function rowStyle(anime: PlannedAnime, previewIdx: number) {
   justify-content: center;
   padding: 80px 0;
   text-align: center;
+}
+.empty-saved-btn {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border-input);
+  background: none;
+  color: #6b7280;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.empty-saved-btn:hover {
+  border-color: #9ca3af;
+  color: #e5e7eb;
 }
 
 .all-done-state {

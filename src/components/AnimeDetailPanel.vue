@@ -511,6 +511,7 @@ const LOGO_OVERRIDES: Record<string, string> = {
 };
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useBingeStore } from "@/stores/bingeStore";
+import { useSearchStore } from "@/stores/searchStore";
 import {
   fetchAnimeReviews,
   fetchAnimeDetails,
@@ -533,6 +534,7 @@ import {
 
 const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
+const searchStore = useSearchStore();
 
 const anime = computed(() => {
   const id = plannerStore.selectedAnimeId;
@@ -540,7 +542,9 @@ const anime = computed(() => {
   const fromPlanned = plannerStore.plannedAnime.find((a) => a.id === id);
   if (fromPlanned) return fromPlanned;
   const fromBinge = bingeStore.list.find((a) => a.id === id);
-  return fromBinge ? toPlanned(fromBinge) : null;
+  if (fromBinge) return toPlanned(fromBinge);
+  const fromSearch = searchStore.results.find((a) => a.id === id);
+  return fromSearch ? toPlanned(fromSearch) : null;
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
