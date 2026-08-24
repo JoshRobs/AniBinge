@@ -233,7 +233,7 @@ onUnmounted(() => {
 });
 
 const BATCH_SIZE = 2;
-const BATCH_DELAY_MS = 1100; // slightly over 1s to stay within Jikan's 3 req/sec
+const BATCH_DELAY_MS = 1100; // 2 req/1.1s — within Tenrai's ~4 req/sec and Jikan's 3 req/sec
 
 onMounted(async () => {
   if (ids.value.length === 0) {

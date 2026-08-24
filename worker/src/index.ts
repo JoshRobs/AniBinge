@@ -4,7 +4,18 @@ export interface Env {
 
 const CACHE_TTL_CURRENT  = 60 * 60 * 48;      // 48 hours — current season changes weekly
 const CACHE_TTL_FINISHED = 60 * 60 * 24 * 7;  // 7 days  — finished seasons are essentially static
-const JIKAN_PAGE_DELAY = 500;
+
+// Tenrai is schema-compatible with Jikan v4, so both serve the same shapes from
+// the same paths. Tried in order; a season fetch falls back to the next source
+// only after exhausting retries on the current one.
+const API_SOURCES = [
+  "https://api.tenrai.org/v1",
+  "https://api.jikan.moe/v4",
+];
+
+// 500ms = 2 req/sec, within Tenrai's ~4 req/sec ceiling and Jikan's 3 req/sec.
+const API_PAGE_DELAY = 500;
+const MAX_ATTEMPTS = 3;
 const INFLIGHT_TTL = 120; // seconds — lock auto-expires if a worker crashes mid-fetch
 const POLL_INTERVAL = 1000; // ms between KV checks when waiting on another worker
 const POLL_TIMEOUT = 30_000; // ms — give up waiting and fetch ourselves after this
@@ -54,16 +65,25 @@ function recentSeasons(count: number): Array<{ season: Season; year: number }> {
   return result;
 }
 
-// ── Jikan ────────────────────────────────────────────────────────────────────
+// ── Upstream fetch ───────────────────────────────────────────────────────────
 
-async function jikanFetch(url: string, attempt = 1): Promise<any> {
+// Retries rate limits and transient 5xx (both sources sit behind proxies that
+// return 502/504 when their own upstream is unreachable). Honors Retry-After
+// when present — Tenrai sends it on 429 — and falls back to linear backoff.
+async function apiFetch(url: string, attempt = 1): Promise<any> {
   const res = await fetch(url);
-  if (res.status === 429) {
-    if (attempt >= 3) throw new Error("Jikan rate limit exceeded");
-    await delay(1000 * attempt);
-    return jikanFetch(url, attempt + 1);
+
+  if (res.status === 429 || res.status >= 500) {
+    if (attempt >= MAX_ATTEMPTS) {
+      throw new Error(`Upstream ${res.status} after ${MAX_ATTEMPTS} attempts`);
+    }
+    const retryAfter = Number(res.headers.get("Retry-After"));
+    const wait = retryAfter > 0 ? retryAfter * 1000 : 1000 * attempt;
+    await delay(wait);
+    return apiFetch(url, attempt + 1);
   }
-  if (!res.ok) throw new Error(`Jikan error ${res.status}`);
+
+  if (!res.ok) throw new Error(`Upstream error ${res.status}`);
   return res.json();
 }
 
@@ -84,20 +104,24 @@ function mapAnime(a: any) {
   };
 }
 
-async function fetchJikanSeason(season: string, year: number) {
+async function fetchSeasonFrom(base: string, season: string, year: number) {
   const results: ReturnType<typeof mapAnime>[] = [];
   let page = 1;
   let hasNextPage = true;
 
   while (hasNextPage) {
-    const { data, pagination } = await jikanFetch(
-      `https://api.jikan.moe/v4/seasons/${year}/${season}?page=${page}`
+    const { data, pagination } = await apiFetch(
+      `${base}/seasons/${year}/${season}?page=${page}`
     );
+    // A 200 with an error-shaped body would otherwise throw a bare TypeError
+    // and read as a bug in this worker rather than an upstream problem.
+    if (!Array.isArray(data)) throw new Error("Malformed season payload");
+
     const filtered = data.filter((a: any) => a.type === "TV" || a.type === "ONA");
     results.push(...filtered.map(mapAnime));
-    hasNextPage = pagination.has_next_page;
+    hasNextPage = pagination?.has_next_page ?? false;
     page++;
-    if (hasNextPage) await delay(JIKAN_PAGE_DELAY);
+    if (hasNextPage) await delay(API_PAGE_DELAY);
   }
 
   const seen = new Set<number>();
@@ -106,6 +130,23 @@ async function fetchJikanSeason(season: string, year: number) {
     seen.add(a.id);
     return true;
   });
+}
+
+// Restarts pagination cleanly against the next source rather than stitching
+// pages across two of them, which would depend on their paging staying aligned.
+async function fetchSeason(season: string, year: number) {
+  const failures: string[] = [];
+
+  for (const base of API_SOURCES) {
+    try {
+      return await fetchSeasonFrom(base, season, year);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      failures.push(`${new URL(base).host}: ${msg}`);
+    }
+  }
+
+  throw new Error(`All sources failed — ${failures.join("; ")}`);
 }
 
 // ── AniList ──────────────────────────────────────────────────────────────────
@@ -172,17 +213,19 @@ function seasonTtl(season: string, year: number): number {
 }
 
 async function warmSeason(season: string, year: number, env: Env): Promise<void> {
-  const [jikanResult, anilistResult] = await Promise.allSettled([
-    fetchJikanSeason(season, year),
+  const [seasonResult, anilistResult] = await Promise.allSettled([
+    fetchSeason(season, year),
     fetchAniListData(season, year),
   ]);
 
-  if (jikanResult.status === "rejected") throw new Error(jikanResult.reason?.message);
+  // Rethrow the original so the cause survives — wrapping it in a new Error
+  // dropped non-Error rejections to "Error: undefined".
+  if (seasonResult.status === "rejected") throw seasonResult.reason;
 
   const anilistMap =
     anilistResult.status === "fulfilled" ? anilistResult.value : new Map<number, AniListEntry>();
 
-  const anime = jikanResult.value.map((a) => {
+  const anime = seasonResult.value.map((a) => {
     const al = anilistMap.get(a.id);
     return {
       ...a,
@@ -200,7 +243,7 @@ async function warmSeason(season: string, year: number, env: Env): Promise<void>
 
 // ── Inflight deduplication ────────────────────────────────────────────────────
 // KV has no atomic CAS, so two workers can slip through the lock check in the
-// same millisecond. This is acceptable: it reduces N concurrent Jikan fetches
+// same millisecond. This is acceptable: it reduces N concurrent upstream fetches
 // down to ~2 rather than guaranteeing exactly 1.
 
 async function tryAcquireLock(env: Env, cacheKey: string): Promise<boolean> {
@@ -283,7 +326,7 @@ export default {
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
     // Pre-warm the last 3 years of seasons (12 total) sequentially so we don't
-    // flood Jikan with concurrent requests from the cron itself. Skip seasons
+    // flood the upstream with concurrent requests from the cron itself. Skip seasons
     // that already have fresh data in KV.
     ctx.waitUntil(
       (async () => {
@@ -296,7 +339,7 @@ export default {
           } catch (e) {
             console.error(`Failed to warm ${season} ${year}:`, e);
           }
-          await delay(5000); // breathing room between seasons for Jikan
+          await delay(5000); // breathing room between seasons for the upstream
         }
       })()
     );

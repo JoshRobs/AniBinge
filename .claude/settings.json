@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 30 \"https://api.tenrai.org/v1/seasons/2026/summer?page=1\")",
+      "Bash(curl -s -I --max-time 30 \"https://api.tenrai.org/v1/seasons/2026/summer?page=1\")",
+      "Bash(node -e ' *)",
+      "Bash(npx vue-tsc *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"exit=$?\")"
+    ]
+  }
+}
