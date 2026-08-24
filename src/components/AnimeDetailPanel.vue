@@ -5,6 +5,7 @@
     v-if="anime"
     :style="{
       width: panelWidth + 'px',
+      height: panelHeight,
       transform: swipeDelta ? `translateY(${swipeDelta}px)` : undefined,
       transition: swipeTransition,
     }"
@@ -502,7 +503,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick, onUnmounted } from "vue";
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import BilibiliTVLogo from "@/assets/BilibiliTV.png";
 
 const LOGO_OVERRIDES: Record<string, string> = {
@@ -510,6 +511,7 @@ const LOGO_OVERRIDES: Record<string, string> = {
 };
 import { usePlannerStore } from "@/stores/plannerStore";
 import { useBingeStore } from "@/stores/bingeStore";
+import { useSearchStore } from "@/stores/searchStore";
 import {
   fetchAnimeReviews,
   fetchAnimeDetails,
@@ -532,6 +534,7 @@ import {
 
 const plannerStore = usePlannerStore();
 const bingeStore = useBingeStore();
+const searchStore = useSearchStore();
 
 const anime = computed(() => {
   const id = plannerStore.selectedAnimeId;
@@ -539,7 +542,9 @@ const anime = computed(() => {
   const fromPlanned = plannerStore.plannedAnime.find((a) => a.id === id);
   if (fromPlanned) return fromPlanned;
   const fromBinge = bingeStore.list.find((a) => a.id === id);
-  return fromBinge ? toPlanned(fromBinge) : null;
+  if (fromBinge) return toPlanned(fromBinge);
+  const fromSearch = searchStore.results.find((a) => a.id === id);
+  return fromSearch ? toPlanned(fromSearch) : null;
 });
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -738,8 +743,22 @@ function jaVA(char: Character) {
   return char.voiceActors.find((v) => v.language === "Japanese");
 }
 
-// ── Swipe to dismiss (mobile) ─────────────────────────────────────────────────
+// ── Panel height (clips to viewport when header is visible) ───────────────────
 const panelEl = ref<HTMLElement | null>(null);
+const panelHeight = ref('100vh');
+
+function updatePanelHeight() {
+  if (!panelEl.value || window.innerWidth <= 768) return;
+  const top = panelEl.value.getBoundingClientRect().top;
+  panelHeight.value = top > 0 ? `calc(100vh - ${top}px)` : '100vh';
+}
+
+onMounted(() => {
+  updatePanelHeight();
+  window.addEventListener('scroll', updatePanelHeight, { passive: true });
+});
+
+// ── Swipe to dismiss (mobile) ─────────────────────────────────────────────────
 const charModalEl = ref<HTMLElement | null>(null);
 
 // Prevent wheel + touch scroll everywhere except inside the char modal when it
@@ -851,6 +870,7 @@ window.addEventListener("keydown", onKeyDown);
 onUnmounted(() => {
   stopResize();
   window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("scroll", updatePanelHeight);
   document.removeEventListener("touchmove", preventScroll);
 });
 </script>

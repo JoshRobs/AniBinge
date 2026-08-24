@@ -33,7 +33,11 @@ export const usePlannerStore = defineStore("planner", {
           if (!a.score && b.score) return 1;
           if (a.score && !b.score) return -1;
           if (state.sortBy === "score") return b.score - a.score;
-          if (state.sortBy === "episodes") return a.episodes - b.episodes;
+          if (state.sortBy === "episodes") {
+            if (!a.episodesKnown && b.episodesKnown) return 1;
+            if (a.episodesKnown && !b.episodesKnown) return -1;
+            return a.episodes - b.episodes;
+          }
           return +a.estimatedEnd - +b.estimatedEnd;
         });
     },
