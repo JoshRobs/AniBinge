@@ -325,21 +325,30 @@ export default {
   },
 
   async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
-    // Pre-warm the last 3 years of seasons (12 total) sequentially so we don't
-    // flood the upstream with concurrent requests from the cron itself. Skip seasons
-    // that already have fresh data in KV.
+    // Check the last 8 seasons but warm at most 2 uncached ones per invocation.
+    // Each season costs ~15–25 fetch() subrequests (season + AniList pagination),
+    // so warming more than 2 at once risks hitting Cloudflare's per-invocation
+    // subrequest limit. Any seasons skipped here are warmed on-demand by the
+    // fetch handler when a user first requests them.
+    //
+    // Note: a season that falls back to the secondary source spends retries on
+    // the primary first, so its subrequest cost can roughly double. The cap of 2
+    // is what keeps that worst case inside the limit.
     ctx.waitUntil(
       (async () => {
-        for (const { season, year } of recentSeasons(12)) {
+        let warmed = 0;
+        for (const { season, year } of recentSeasons(8)) {
+          if (warmed >= 2) break;
           const cacheKey = `season:${year}:${season}`;
           const existing = await env.ANIBINGE_CACHE.get(cacheKey);
           if (existing) continue;
           try {
             await warmSeason(season, year, env);
+            warmed++;
           } catch (e) {
             console.error(`Failed to warm ${season} ${year}:`, e);
           }
-          await delay(5000); // breathing room between seasons for the upstream
+          if (warmed < 2) await delay(5000); // breathing room for the upstream
         }
       })()
     );
